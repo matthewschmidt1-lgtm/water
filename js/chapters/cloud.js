@@ -1,5 +1,6 @@
 // Sky. A stylized cloud drifts across a dawn sky.
-// Inhale gathers it; exhale loosens it and lets a few drops go. Touch it and a drop speaks.
+// Inhale gathers it; exhale loosens it and lets a few drops go. On each exhale one drop lets go and says where it has been.
+// Nothing here needs a touch. A touch is welcome anyway.
 
 const LINES = [
   'I\'ve been here before.',
@@ -126,12 +127,20 @@ function release(n) {
   for (let i = 0; i < n; i++) spawn(x + (Math.random() - 0.5) * 3.6 * unit, y + (0.5 + Math.random() * 0.5) * unit, false, i * 260 + Math.random() * 200);
 }
 
+let sayTimer = null;
 function speak() {
   if (!sayEl) return;
+  const dx = (Math.random() - 0.5) * 2 * unit;
+  spawn(cloudX() + dx, cloudY() + 0.8 * unit, true, 0);
   sayEl.textContent = LINES[sayIdx % LINES.length];
   sayIdx++;
-  sayEl.classList.remove('show'); void sayEl.offsetWidth; sayEl.classList.add('show');
-  spawn(cloudX() + (Math.random() - 0.5) * 2 * unit, cloudY() + 0.8 * unit, true, 0);
+  // beside the drop that let go, just under the cloud; kept inside the scene
+  const left = Math.max(12, Math.min(w - 12, cloudX() + dx + 18));
+  sayEl.style.left = left + 'px';
+  sayEl.style.top = Math.min(h - 40, cloudY() + 1.7 * unit) + 'px';
+  if (left > w * 0.6) { sayEl.style.transform = 'translateX(-100%)'; sayEl.style.left = (left - 36) + 'px'; } else sayEl.style.transform = '';
+  sayEl.classList.add('show');
+  clearTimeout(sayTimer); sayTimer = setTimeout(() => sayEl.classList.remove('show'), 9500);
   audio.plip(0.9 + Math.random() * 0.5);
 }
 
@@ -145,10 +154,11 @@ export default {
     c = ctx.c2d; reduced = ctx.reduced; audio = ctx.audio;
     const style = document.createElement('style');
     style.textContent = `
-      #cloud .cloud-say { font-family: var(--serif); font-style: italic; font-size: 1.25rem; color: var(--cyan); min-height: 1.8em; margin: 8px 0 0; opacity: 0; }
-      #cloud .cloud-say.show { animation: rise 0.8s ease both; }
+      #cloud .cloud-say { position: absolute; z-index: 2; margin: 0; pointer-events: none; white-space: nowrap;
+        font-family: var(--serif); font-style: italic; font-size: clamp(1.05rem, 2vw, 1.3rem); color: var(--mist);
+        text-shadow: 0 1px 12px rgba(4,17,31,0.9); opacity: 0; transition: opacity 1.6s ease; }
+      #cloud .cloud-say.show { opacity: 1; }
       #cloud .chapter-canvas { cursor: pointer; touch-action: manipulation; }
-      #cloud .hint { color: var(--muted); font-size: 0.8rem; letter-spacing: 0.2em; text-transform: uppercase; margin: 18px 0 0; }
     `;
     el.appendChild(style);
     const body = document.createElement('div');
@@ -156,9 +166,7 @@ export default {
     body.innerHTML = `
       <p class="chapter-kicker">Sky</p>
       <h2>Every drop has been somewhere.</h2>
-      <p class="lede">A cloud is a crowd of tiny drops, floating together. Touch it, and one will tell you where it has been.</p>
-      <p class="hint">Touch the cloud</p>
-      <p class="cloud-say" aria-live="polite"></p>
+      <p class="lede">A cloud is a crowd of tiny drops, floating together. Every one of them has been somewhere.</p>
       <div class="depth" data-level="1">
         <p class="l1">Look: a cloud is made of tiny drops of water, too small to fall.</p>
         <div class="l2"><span class="term">Discover</span><p>Each drop is smaller than a speck of dust, so the air holds it up the way it holds up dust in a sunbeam. Warm air is always rising, too, and it carries the drops with it. When drops bump into each other they join. Join enough times and a drop gets heavy. Then it falls, and we call it rain.</p></div>
@@ -166,22 +174,19 @@ export default {
         <button class="depth-more">Discover</button>
       </div>`;
     el.appendChild(body);
-    sayEl = body.querySelector('.cloud-say');
+    sayEl = document.createElement('p'); sayEl.className = 'cloud-say'; sayEl.setAttribute('aria-live', 'polite');
+    el.appendChild(sayEl);
     layout(ctx);
 
     // Listen on the whole section so the cloud is touchable even where the copy overlaps it.
     const pos = (e) => { const r = el.getBoundingClientRect(); return [e.clientX - r.left, e.clientY - r.top]; };
     el.addEventListener('pointerdown', (e) => { if (e.target.closest('button, a')) return; const [x, y] = pos(e); if (hit(x, y)) { speak(); inside = true; }
       else if (y < h) { spawn(x, y, false, 0); spawn(x + 10, y + 4, false, 140); audio.plip(0.8 + Math.random() * 0.6); } });
-    el.addEventListener('pointermove', (e) => {
-      if (e.pointerType !== 'mouse') return;
-      const [x, y] = pos(e);
-      const now = hit(x, y);
-      if (now && !inside) speak();
-      inside = now;
+    offPhase = ctx.breath.onPhase((p) => {
+      if (p !== 'exhale') return;
+      if (!reduced) release(3 + Math.floor(Math.random() * 3));
+      speak();
     });
-    el.addEventListener('pointerleave', () => { inside = false; });
-    offPhase = ctx.breath.onPhase((p) => { if (p === 'exhale' && !reduced) release(3 + Math.floor(Math.random() * 3)); });
   },
 
   tick(dt, breath, ctx) {
