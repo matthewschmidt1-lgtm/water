@@ -4,9 +4,12 @@
 const MAX = 250;
 const MIST_MAX = 60;
 const GROUNDS = {
-  sand: { infil: 0.72, runoff: 0.13, sink: 1.7, label: 'Sand' },
-  loam: { infil: 0.50, runoff: 0.35, sink: 1.0, label: 'Loam' },
-  clay: { infil: 0.14, runoff: 0.71, sink: 0.35, label: 'Clay' },
+  sand: { infil: 0.72, runoff: 0.13, sink: 1.7, label: 'Sand', top: '#b99a6a', grain: 'rgba(244,236,214,0.55)', grains: 700, gsize: 1.6,
+          note: 'Sand: big grains, big gaps. Rain sinks fast.' },
+  loam: { infil: 0.50, runoff: 0.35, sink: 1.0, label: 'Loam', top: '#6b4f3a', grain: 'rgba(217,199,163,0.28)', grains: 350, gsize: 1.2,
+          note: 'Loam: a mix of sand, silt and clay. Some runs off, most soaks in.' },
+  clay: { infil: 0.14, runoff: 0.71, sink: 0.35, label: 'Clay', top: '#7a4a3c', grain: 'rgba(60,30,25,0.45)', grains: 120, gsize: 0.9,
+          note: 'Clay: tiny grains packed tight. Water sits on top and slides away.' },
 };
 
 let el, ctx, c, w, h;
@@ -45,6 +48,16 @@ function buildStatic() {
   s.setTransform(ctx.dpr, 0, 0, ctx.dpr, 0, 0);
   let seed = 7;
   const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
+  // topsoil grains: size and count depend on the ground type
+  for (let i = 0; i < ground.grains; i++) {
+    const x = rnd() * w, y = surfaceAt(x) + 3 + rnd() * (L.top - surfaceAt(x) - 4);
+    s.fillStyle = ground.grain;
+    s.beginPath(); s.arc(x, y, ground.gsize * (0.6 + rnd()), 0, Math.PI * 2); s.fill();
+  }
+  if (ground.label === 'Clay') {
+    s.strokeStyle = 'rgba(40,20,15,0.5)'; s.lineWidth = 1;
+    for (let i = 0; i < 9; i++) { const y = L.surfR + 8 + i * ((L.top - L.surfR - 12) / 9); s.beginPath(); s.moveTo(0, y - (L.surfR - L.surfL)); s.lineTo(w, y); s.stroke(); }
+  }
   // gravel dots through the aquifer band
   for (let i = 0; i < 900; i++) {
     const x = rnd() * w, y = L.sub + rnd() * (L.aqB - L.sub);
@@ -160,7 +173,7 @@ function draw(breath) {
   sky.addColorStop(0, '#0b2a44'); sky.addColorStop(1, '#3a6f8a');
   c.fillStyle = sky; c.fillRect(0, 0, w, L.surfR + 2);
   // ground bands
-  c.fillStyle = '#6b4f3a';
+  c.fillStyle = ground.top;
   c.beginPath(); c.moveTo(0, L.surfL); c.lineTo(w, L.surfR); c.lineTo(w, L.top); c.lineTo(0, L.top); c.closePath(); c.fill();
   c.fillStyle = '#2e2117'; c.fillRect(0, L.top, w, L.sub - L.top);
   c.fillStyle = '#3b2c20'; c.fillRect(0, L.sub, w, L.aqB - L.sub);
@@ -211,6 +224,7 @@ export default {
         #soil .chapter-canvas { touch-action: none; cursor: crosshair; }
         #soil .soil-readout { display: grid; grid-template-columns: repeat(3, auto); gap: 6px 22px; margin-top: 18px; font-size: 0.72rem; letter-spacing: 0.2em; text-transform: uppercase; color: var(--muted); width: max-content; }
         #soil .soil-readout b { display: block; color: var(--cyan); font-size: 1.2rem; font-weight: 400; letter-spacing: 0.05em; }
+        #soil .ground-note { margin: 8px 0 0; color: var(--mist); font-size: 0.9rem; min-height: 1.4em; }
         #soil .table-wrap { margin-top: 14px; font-size: 0.72rem; letter-spacing: 0.2em; text-transform: uppercase; color: var(--muted); max-width: 320px; }
         #soil .table-bar { height: 6px; margin-top: 6px; border-radius: 3px; background: rgba(244,249,251,0.1); overflow: hidden; }
         #soil .table-bar i { display: block; height: 100%; width: 0; background: var(--turquoise); transition: width 0.3s; }
@@ -225,6 +239,7 @@ export default {
           <button class="chip" data-g="loam" aria-pressed="true">Loam</button>
           <button class="chip" data-g="clay" aria-pressed="false">Clay</button>
         </div>
+        <p class="ground-note">${GROUNDS.loam.note}</p>
         <div class="soil-readout">
           <span>ran off<b data-r="run">0</b></span>
           <span>soaked in<b data-r="soak">0</b></span>
@@ -244,6 +259,8 @@ export default {
     readout.bar = el.querySelector('.table-bar i');
     el.querySelectorAll('.chip[data-g]').forEach((b) => b.addEventListener('click', () => {
       ground = GROUNDS[b.dataset.g];
+      buildStatic();
+      el.querySelector('.ground-note').textContent = ground.note;
       el.querySelectorAll('.chip[data-g]').forEach((x) => x.setAttribute('aria-pressed', String(x === b)));
       ctx.audio.plip(1.1);
     }));

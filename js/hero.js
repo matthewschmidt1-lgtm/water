@@ -18,6 +18,34 @@ function resize() {
 resize();
 addEventListener('resize', resize);
 
+// Stars: a fixed field in the upper sky. Each has its own twinkle phase and speed.
+const STARS = 140;
+const stars = [];
+{
+  let seed = 42;
+  const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
+  for (let i = 0; i < STARS; i++) {
+    stars.push({ u: rnd(), v: rnd() * rnd() * 0.55, r: 0.4 + rnd() * 1.1, ph: rnd() * Math.PI * 2, sp: 0.4 + rnd() * 1.4, big: rnd() < 0.08 });
+  }
+}
+function drawStars(t) {
+  const glow = 0.55 + breath.value * 0.35;
+  for (let i = 0; i < STARS; i++) {
+    const s = stars[i];
+    const x = s.u * w, y = s.v * h;
+    const tw = 0.5 + 0.5 * Math.sin(t * s.sp + s.ph);
+    const a = (0.25 + tw * 0.75) * glow * (1 - s.v / 0.6);
+    c.fillStyle = `rgba(223,251,255,${a.toFixed(3)})`;
+    c.beginPath(); c.arc(x, y, s.r, 0, Math.PI * 2); c.fill();
+    if (s.big && tw > 0.75) {
+      // a soft four-point sparkle on the brightest moment
+      const L = 3 + tw * 5;
+      c.strokeStyle = `rgba(223,251,255,${(a * 0.6).toFixed(3)})`; c.lineWidth = 0.6;
+      c.beginPath(); c.moveTo(x - L, y); c.lineTo(x + L, y); c.moveTo(x, y - L); c.lineTo(x, y + L); c.stroke();
+    }
+  }
+}
+
 const start = performance.now();
 const ripples = [];          // { x, y, t }
 let dropY = -20, dropV = 0, landed = false, revealed = false;
@@ -38,6 +66,7 @@ function frame(now) {
   const dt = Math.min(now - last, 50); last = now;
   const t = (now - start) / 1000;
   c.clearRect(0, 0, w, h);
+  drawStars(reduced ? 0 : t);
   const cx = w / 2;
   const wl = waterLine();
 
