@@ -163,12 +163,6 @@ addEventListener('resize', () => {
 // 0 nothing -> 1 LOOK -> 2 DISCOVER -> 3 GO DEEPER
 const DEPTH_LABELS = ['Why?', 'Discover', 'Go deeper', 'That\'s the deep end'];
 function wireDepth(el) {
-  if (el.hasAttribute('data-quiet') && el.querySelector('.depth')) {
-    const ask = document.createElement('button');
-    ask.className = 'ask-btn'; ask.setAttribute('aria-label', 'Why?'); ask.textContent = '?';
-    ask.addEventListener('click', () => { const on = el.classList.toggle('ask'); if (on) audio.plip(1.2); });
-    el.appendChild(ask);
-  }
   el.querySelectorAll('.depth').forEach((box) => {
     const btn = box.querySelector('.depth-more');
     if (!btn) return;

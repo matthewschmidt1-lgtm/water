@@ -226,21 +226,8 @@ section.chapter.is-failed::after {
 /* ---------- Quiet chapters: the picture and one line. Science waits behind a single mark. ---------- */
 section.chapter[data-quiet] .lede,
 section.chapter[data-quiet] .depth { display: none; }
-section.chapter[data-quiet].ask .depth { display: block; animation: rise 0.9s ease both; }
-.ask-btn {
-  position: absolute; right: 18px; bottom: 84px; z-index: 4;
-  width: 40px; height: 40px; border-radius: 50%; padding: 0;
-  background: rgba(4, 17, 31, 0.45); backdrop-filter: blur(8px);
-  border: 1px solid color-mix(in srgb, var(--accent) 35%, transparent); color: var(--accent);
-  font-family: var(--serif); font-size: 1.1rem; cursor: pointer; opacity: 0.6;
-  transition: opacity 0.4s, border-color 0.4s, transform 0.4s;
-}
-.ask-btn:hover, section.chapter.ask .ask-btn { opacity: 1; border-color: var(--accent); }
-section.chapter.ask .ask-btn { transform: rotate(45deg); }
-@media (max-width: 820px) { .ask-btn { right: 14px; bottom: auto; top: calc(var(--scene-h, 62vh) - 54px); } }
-
 /* While the water leads, the chapters step back. */
-body.following .chapter-body, body.following .ask-btn, body.following .cloud-say, body.following .scene-hint { opacity: 0 !important; pointer-events: none !important; transition: opacity 0.5s ease; }
+body.following .chapter-body, body.following .cloud-say, body.following .scene-hint { opacity: 0 !important; pointer-events: none !important; transition: opacity 0.5s ease; }
 
 /* A two-word hint drawn in the scene, gone after the first touch. */
 .scene-hint {
