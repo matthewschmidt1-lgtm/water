@@ -113,12 +113,18 @@ button { font: inherit; }
 @keyframes draw { to { stroke-dashoffset: 0; } }
 @keyframes glowin { to { opacity: 0.25; } }
 @keyframes dropin { to { opacity: 1; } }
-#cycle .cycle-hint {
-  position: absolute; bottom: 28px; left: 50%; transform: translateX(-50%);
-  color: var(--muted); font-size: 0.72rem; letter-spacing: 0.3em; text-transform: uppercase;
-  opacity: 0; transition: opacity 2s ease 7.5s;
+#cycle .cycle-earned {
+  position: absolute; top: 9vh; left: 16px; right: 16px; text-align: center; margin: 0;
+  font-family: var(--serif); font-style: italic; color: var(--mist); font-size: clamp(1rem, 2.4vw, 1.3rem);
+  opacity: 0; transition: opacity 2.2s ease;
 }
-#cycle.is-visible .cycle-hint { opacity: 1; }
+#cycle.is-visible .cycle-earned { opacity: 1; }
+#cycle .cycle-word {
+  position: absolute; bottom: 9vh; left: 0; right: 0; text-align: center; margin: 0;
+  font-family: var(--serif); letter-spacing: 0.42em; text-indent: 0.42em; font-size: clamp(2rem, 6vw, 4rem);
+  opacity: 0; transform: scale(calc(1 + var(--breath) * 0.03)); transition: opacity 2.6s ease 8s;
+}
+#cycle.is-visible .cycle-word { opacity: 1; }
 
 /* ---------- Chapters ---------- */
 section.chapter {
