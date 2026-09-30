@@ -83,6 +83,8 @@ let scene = null;
 function updateScene() {
   const mid = innerHeight / 2;
   let best = null, bestD = Infinity;
+  const hero = document.querySelector('.hero');
+  if (hero) { const r = hero.getBoundingClientRect(); bestD = Math.abs((r.top + r.bottom) / 2 - mid); }
   sections.forEach((el) => {
     const r = el.getBoundingClientRect();
     const d = Math.abs((r.top + r.bottom) / 2 - mid);

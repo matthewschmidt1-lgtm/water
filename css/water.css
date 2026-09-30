@@ -87,12 +87,14 @@ section.chapter {
   overflow: hidden;
   isolation: isolate;
 }
-.chapter-canvas { position: absolute; inset: 0; z-index: 0; display: block; }
+.chapter-canvas { position: absolute; inset: 0; z-index: 0; display: block; user-select: none; -webkit-user-select: none; }
 .chapter-body {
   position: relative; z-index: 1;
+  user-select: none; -webkit-user-select: none;
+  text-shadow: 0 1px 2px rgba(4, 17, 31, 0.9), 0 0 18px rgba(4, 17, 31, 0.7);
   max-width: 640px;
   margin: 0 auto;
-  padding: clamp(80px, 14vh, 140px) 16px 160px;
+  padding: clamp(80px, 14vh, 140px) 16px 200px;
 }
 .chapter-body.left { margin-left: max(16px, 6vw); }
 .chapter-body.right { margin-right: max(16px, 6vw); margin-left: auto; }
@@ -200,7 +202,7 @@ section.chapter.is-failed::after {
 
 /* WHERE IS WATER? card */
 .card {
-  position: fixed; left: 50%; bottom: 84px; transform: translateX(-50%);
+  position: fixed; left: 0; right: 0; bottom: 84px; margin: 0 auto;
   z-index: 60; width: min(92vw, 520px);
   background: rgba(7, 26, 46, 0.92); backdrop-filter: blur(16px);
   border: 1px solid rgba(127, 242, 255, 0.25); border-radius: 22px;
