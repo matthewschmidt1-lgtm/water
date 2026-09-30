@@ -58,10 +58,13 @@ function makeCtx(el) {
   return ctx;
 }
 
-async function load(name, el) {
+function load(name, el) {
   const entry = chapters.get(name);
-  if (entry.mounted || entry.loading) return;
-  entry.loading = true;
+  if (entry.mounted) return Promise.resolve();
+  if (!entry.loading) entry.loading = doLoad(name, el, entry);
+  return entry.loading;
+}
+async function doLoad(name, el, entry) {
   try {
     const mod = (await import(`./chapters/${name}.js`)).default;
     entry.ctx = makeCtx(el);
@@ -195,11 +198,14 @@ mountJourney({ narrow, reduced, getSceneH: () => sceneH });
 
 // Bottom bar steps aside while the reader scrolls down, and returns on scroll-up or after a pause.
 const bar = document.querySelector('.bottom-bar');
-let lastY = scrollY, barTimer = null, upAcc = 0;
+let lastY = scrollY, barTimer = null, upAcc = 0, barQuietUntil = 0;
+// Scrolls the page makes for itself (opening or closing a closer tile) must not toggle the bar.
+const quietBar = (ms = 1400) => { barQuietUntil = performance.now() + ms; };
 addEventListener('scroll', () => {
   const y = scrollY;
   const dy = y - lastY;
   lastY = y;
+  if (performance.now() < barQuietUntil) { upAcc = 0; return; }
   if (dy > 0) upAcc = 0; else upAcc -= dy;
   if (dy > 4 && y > 80) bar.classList.add('away');
   // A deliberate scroll-up brings it back (a jittery thumb does not).
@@ -254,14 +260,21 @@ if (cycle) {
     requestAnimationFrame(frame);
   };
   const off = breath.onPhase((p) => { if (started && landed && p === 'exhale') rings.push((performance.now() - t0) / 1000); });
-  new IntersectionObserver((entries) => {
+  // Play once the scene is really on screen: half the section (or half of what the viewport can show of it),
+  // measured against the upper 65% of the screen so the ending never starts while the tiles above it are still being read.
+  const endObs = new IntersectionObserver((entries) => {
     entries.forEach((en) => {
-      if (!en.isIntersecting || started) return;
+      if (started || !en.isIntersecting || !en.rootBounds) return;
+      const need = Math.min(en.boundingClientRect.height, en.rootBounds.height) * 0.5;
+      if (en.intersectionRect.height < need - 1) return;
       sizeCycle(); started = true; t0 = performance.now(); cycle.classList.add('is-visible');
       requestAnimationFrame(frame);
+      endObs.disconnect();
     });
-  }, { threshold: 0.5 }).observe(cycle);
-  addEventListener('resize', () => { if (started) sizeCycle(); });
+  }, { rootMargin: '0px 0px -35% 0px', threshold: Array.from({ length: 21 }, (_, i) => i / 20) });
+  endObs.observe(cycle);
+  // Keep the canvas matched to its section (rotation, URL bars, late layout).
+  new ResizeObserver(() => { if (started) sizeCycle(); }).observe(cycle);
 }
 
 // Closer: Cup, Lab and You fold into one section. One opens at a time.
@@ -271,22 +284,49 @@ if (trio) {
   const closeBtn = trio.querySelector('.trio-close');
   const folded = ['cup', 'lab', 'you'];
   let openName = null;
-  function openChapter(name, scroll = true) {
+  let openSeq = 0;
+  // Warm the modules while the reader nears the tiles so a tile opens onto a chapter that mounts at once.
+  new IntersectionObserver((es, o) => {
+    if (es.some((e) => e.isIntersecting)) { folded.forEach((n) => import(`./chapters/${n}.js`).catch(() => {})); o.disconnect(); }
+  }, { rootMargin: '150% 0px' }).observe(trio);
+  async function openChapter(name, scroll = true) {
     if (!folded.includes(name)) return;
+    const seq = ++openSeq;
     folded.forEach((n) => { const sec = document.getElementById(n); sec.hidden = n !== name; });
     tiles.forEach((t) => t.setAttribute('aria-pressed', String(t.dataset.open === name)));
     closeBtn.hidden = false;
     openName = name;
+    if (scroll) quietBar();
     const entry = chapters.get(name);
-    if (entry?.mounted) { entry.ctx.resize(); entry.mod.resize?.(entry.ctx); }
-    if (scroll) requestAnimationFrame(() => document.getElementById(name).scrollIntoView({ behavior: reduced ? 'auto' : 'smooth', block: 'start' }));
+    // Mount first, at its real size, so the page has its final height before anything scrolls.
+    await load(name, entry.el);
+    if (seq !== openSeq) return;
+    if (entry.mounted) { entry.ctx.resize(); entry.mod.resize?.(entry.ctx); }
     updateScene();
+    if (scroll) requestAnimationFrame(() => {
+      if (seq !== openSeq) return;
+      const sec = document.getElementById(name);
+      sec.scrollIntoView({ behavior: reduced ? 'auto' : 'smooth', block: 'start' });
+      // Chapters above may finish mounting while the page travels; once it settles, land exactly on the panel.
+      let done = false;
+      const settle = () => {
+        if (done) return; done = true;
+        removeEventListener('scrollend', settle);
+        if (seq === openSeq && Math.abs(sec.getBoundingClientRect().top) > 3) { quietBar(); sec.scrollIntoView({ behavior: 'auto', block: 'start' }); }
+      };
+      addEventListener('scrollend', settle);
+      setTimeout(settle, reduced ? 100 : 1600);
+    });
   }
   function closeChapter() {
+    openSeq++;
+    quietBar();
+    scrollTo({ top: scrollY, behavior: 'instant' });   // stop any smooth scroll still travelling to the panel
     folded.forEach((n) => { document.getElementById(n).hidden = true; });
     tiles.forEach((t) => t.setAttribute('aria-pressed', 'false'));
     closeBtn.hidden = true; openName = null;
-    trio.scrollIntoView({ behavior: reduced ? 'auto' : 'smooth', block: 'start' });
+    // The panel collapses in the same frame the tiles are placed mid-screen: one change, and the ending stays below the fold.
+    trio.scrollIntoView({ behavior: 'instant', block: 'center' });
     updateScene();
   }
   tiles.forEach((t) => t.addEventListener('click', () => { audio.plip(1.1); openName === t.dataset.open ? closeChapter() : openChapter(t.dataset.open); }));
