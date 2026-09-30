@@ -19,6 +19,9 @@ const dpr = Math.min(devicePixelRatio || 1, 2);
 //     unmount() {}        // optional
 //   }
 const chapters = new Map(); // name -> { el, mod, ctx, mounted, visible }
+const narrow = matchMedia('(max-width: 820px)');
+const SCENE_FRACTION = 0.62;
+narrow.addEventListener('change', () => dispatchEvent(new Event('resize')));
 
 const sections = [...document.querySelectorAll('section.chapter[data-chapter]')];
 
@@ -32,7 +35,8 @@ function makeCtx(el) {
     resize() {
       const r = el.getBoundingClientRect();
       ctx.w = Math.max(1, Math.round(r.width));
-      ctx.h = Math.max(1, Math.round(r.height));
+      // On phones the scene is a band across the top and the copy flows below it (see css: --scene-h).
+      ctx.h = Math.max(1, Math.round(narrow.matches ? innerHeight * SCENE_FRACTION : r.height));
       canvas.width = ctx.w * dpr;
       canvas.height = ctx.h * dpr;
       canvas.style.width = ctx.w + 'px';
@@ -75,7 +79,7 @@ const visibility = new IntersectionObserver((entries) => {
     en.target.classList.toggle('is-visible', en.isIntersecting);
   });
   updateScene();
-}, { threshold: 0.35 });
+}, { threshold: 0.2 });
 sections.forEach((el) => { preloader.observe(el); visibility.observe(el); });
 
 // Which chapter dominates the viewport? (for sound + nav highlight)
