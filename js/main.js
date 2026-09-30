@@ -157,14 +157,19 @@ addEventListener('resize', () => {
 });
 
 // ---------- Depth layers: LOOK -> DISCOVER -> GO DEEPER ----------
+// Never explain before the visitor has had a chance to wonder: nothing shows until they ask "Why?".
+// 0 nothing -> 1 LOOK -> 2 DISCOVER -> 3 GO DEEPER
+const DEPTH_LABELS = ['Why?', 'Discover', 'Go deeper', 'That\'s the deep end'];
 function wireDepth(el) {
   el.querySelectorAll('.depth').forEach((box) => {
     const btn = box.querySelector('.depth-more');
     if (!btn) return;
+    box.dataset.level = '0';
+    btn.textContent = DEPTH_LABELS[0];
     btn.addEventListener('click', () => {
-      const level = Math.min(3, (parseInt(box.dataset.level || '1', 10)) + 1);
+      const level = Math.min(3, (parseInt(box.dataset.level || '0', 10)) + 1);
       box.dataset.level = String(level);
-      btn.textContent = level === 2 ? 'Go deeper' : level === 3 ? 'That\'s the deep end' : 'Discover';
+      btn.textContent = DEPTH_LABELS[level];
       if (level === 3) btn.disabled = true;
       audio.plip(1.2);
     });
@@ -268,6 +273,26 @@ addEventListener('scroll', () => {
 // Breath hint text under the hero
 const hint = document.getElementById('breath-word');
 if (hint) breath.onPhase((p) => { hint.textContent = p; });
+
+// The front door shows nothing but the water. The rest of the interface appears once you enter.
+function checkEntered() {
+  if (scrollY > innerHeight * 0.45) { document.body.classList.add('entered'); removeEventListener('scroll', checkEntered); }
+}
+addEventListener('scroll', checkEntered, { passive: true });
+checkEntered();
+
+// The cycle: three lines, one thread that curves back to where it began.
+const cycle = document.getElementById('cycle');
+if (cycle) {
+  new IntersectionObserver((entries) => {
+    entries.forEach((en) => {
+      if (!en.isIntersecting || cycle.classList.contains('is-visible')) return;
+      cycle.classList.add('is-visible');
+      const motion = cycle.querySelector('animateMotion');
+      setTimeout(() => { try { motion.beginElement(); } catch (_) {} }, 600);
+    });
+  }, { threshold: 0.5 }).observe(cycle);
+}
 
 // The river along the bottom edge grows with the journey.
 const river = document.querySelector('#river i');
