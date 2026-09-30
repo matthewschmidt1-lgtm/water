@@ -210,9 +210,6 @@ export default {
           <div class="l3"><span class="term">Hydrogen bonding</span><p>A water molecule is bent, with a slightly negative oxygen and slightly positive hydrogens. In ice each molecule bonds to four neighbours in an open hexagonal lattice, about 9% less dense than the liquid. In liquid water those bonds break and reform trillions of times a second. That bonding also gives water a high heat capacity, which is why oceans moderate the climate.</p><p class="source">Source: <a href="https://www.usgs.gov/special-topics/water-science-school/science/adhesion-and-cohesion-water" target="_blank" rel="noopener">USGS Water Science School: Cohesion</a></p></div>
           <button class="depth-more">Discover</button>
         </div>
-        <p class="chapter-kicker" style="margin-top:32px">Impossible water</p>
-        <div class="chip-row">${MYSTERIES.map((m, i) => `<button class="chip" aria-pressed="false" data-i="${i}">${m.chip}</button>`).join('')}</div>
-        <div class="mystery" hidden><p class="line"></p><p><span class="term">How?</span><span class="how"></span></p></div>
       </div>`);
 
     const cv = ctx.canvas;
@@ -281,16 +278,6 @@ export default {
       vx = 0; ctx.audio.plip(on ? 1.0 : 0.8);
     }));
 
-    const chips = [...el.querySelectorAll('.chip[data-i]')];
-    const box = el.querySelector('.mystery');
-    chips.forEach((chip) => chip.addEventListener('click', () => {
-      const i = +chip.dataset.i, open = chip.getAttribute('aria-pressed') !== 'true';
-      chips.forEach((ch) => ch.setAttribute('aria-pressed', 'false'));
-      chip.setAttribute('aria-pressed', String(open));
-      box.hidden = !open;
-      if (open) { box.querySelector('.line').textContent = MYSTERIES[i].line; box.querySelector('.how').textContent = MYSTERIES[i].how; }
-      ctx.audio.plip(open ? 1.1 : 0.9);
-    }));
     this._font = (getComputedStyle(document.body).getPropertyValue('--serif').trim() || 'Georgia, serif');
   },
 

@@ -8,8 +8,6 @@ const MAX_RIPPLES = 6;
 let el, c, W = 0, H = 0, t = 0;
 let wind = 0.35;                    // 0 calm .. 1 gale
 let horizon = 0, moonX = 0, moonY = 0;
-const VAP_MAX = 18; let vapI = 0;
-const vap = Array.from({ length: VAP_MAX }, () => ({ t: -1, x: 0, y: 0, life: 1, w: 10 }));
 const ys = [];                      // per band: Float32Array(N) of y values
 const baseY = new Float32Array(BANDS);
 const ripples = [];                 // { x, y, t } preallocated, t < 0 = free
@@ -87,8 +85,6 @@ export default {
     offPhase = ctx.breath.onPhase((p) => {
       if (p !== 'exhale') return;
       wetAge = 0;
-      // Where the water goes: a wisp leaves the sea on each exhale and thins into the sky.
-      if (!ctx.reduced) for (let k = 0; k < 3; k++) { const v = vap[vapI++ % VAP_MAX]; v.t = 0; v.x = W * (0.15 + Math.random() * 0.7); v.y = horizon + 14 + Math.random() * (H - horizon) * 0.35; v.life = 5.5 + Math.random() * 2.5; v.w = 10 + Math.random() * 14; }
     });
   },
 
@@ -185,19 +181,6 @@ export default {
     c.beginPath(); c.moveTo(0, wy);
     c.quadraticCurveTo(sx * wash * 0.55, wy + (H - wy) * 0.4 + Math.sin(t * 1.3) * 4, sx * wash, H);
     c.stroke();
-
-    // Vapor: slow to rise, widening and thinning, gone before the next breath.
-    for (let i = 0; i < VAP_MAX; i++) {
-      const v = vap[i];
-      if (v.t < 0) continue;
-      v.t += dts;
-      const u = v.t / v.life;
-      if (u >= 1) { v.t = -1; continue; }
-      const rise = (1 - Math.exp(-u * 2.2)) * (H - horizon) * 0.9;
-      const a = Math.sin(u * Math.PI) * 0.16;
-      c.fillStyle = `rgba(219,233,242,${a})`;
-      c.beginPath(); c.ellipse(v.x + Math.sin(v.t * 0.8 + i) * 6, v.y - rise, v.w * (1 + u * 1.6), v.w * 0.55 * (1 + u * 0.8), 0, 0, Math.PI * 2); c.fill();
-    }
 
     // Ripples from taps: expanding ellipses
     for (let i = 0; i < MAX_RIPPLES; i++) {

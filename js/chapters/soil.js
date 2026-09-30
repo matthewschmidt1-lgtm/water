@@ -223,14 +223,6 @@ function draw(breath) {
   }
 }
 
-function updateReadout() {
-  if (counts.run !== shown.run) readout.run.textContent = (shown.run = counts.run);
-  if (counts.soak !== shown.soak) readout.soak.textContent = (shown.soak = counts.soak);
-  if (counts.evap !== shown.evap) readout.evap.textContent = (shown.evap = counts.evap);
-  const t = Math.round(table * 200) / 2;
-  if (t !== shown.table) { shown.table = t; readout.bar.style.width = t + '%'; }
-}
-
 export default {
   mount(section, context) {
     el = section; ctx = context; c = ctx.c2d; w = ctx.w; h = ctx.h;
@@ -258,12 +250,6 @@ export default {
           <button class="chip" data-g="clay" aria-pressed="false">Clay</button>
         </div>
         <p class="ground-note">${GROUNDS.loam.note}</p>
-        <div class="soil-readout">
-          <span>ran off<b data-r="run">0</b></span>
-          <span>soaked in<b data-r="soak">0</b></span>
-          <span>evaporated<b data-r="evap">0</b></span>
-        </div>
-        <div class="table-wrap">water table<div class="table-bar"><i></i></div></div>
         <div class="depth" data-level="1">
           <p class="l1">LOOK: some water runs away. Some soaks in. Some goes back to the sky.</p>
           <div class="l2"><span class="term">Discover</span><p>Sandy ground drinks fast because its grains are big, with big gaps between them. Clay grains are tiny and packed tight, so water waits on top and slides away. A paved city is like clay everywhere: more runoff, more floods.</p></div>
@@ -274,10 +260,6 @@ export default {
     hintEl = document.createElement('p'); hintEl.className = 'scene-hint'; hintEl.textContent = 'hold the sky';
     hintEl.style.left = '50%'; hintEl.style.transform = 'translateX(-50%)'; hintEl.style.top = '22px';
     el.appendChild(hintEl);
-    readout.run = el.querySelector('[data-r="run"]');
-    readout.soak = el.querySelector('[data-r="soak"]');
-    readout.evap = el.querySelector('[data-r="evap"]');
-    readout.bar = el.querySelector('.table-bar i');
     el.querySelectorAll('.chip[data-g]').forEach((b) => b.addEventListener('click', () => {
       ground = GROUNDS[b.dataset.g];
       buildStatic();
@@ -300,7 +282,6 @@ export default {
     }
     step(dt, breath);
     draw(breath);
-    updateReadout();
   },
   resize(context) {
     w = context.w; h = context.h; layout(); buildStatic();
