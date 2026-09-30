@@ -147,7 +147,7 @@ function wireDepth(el) {
 }
 
 // ---------- Global UI ----------
-mountNav(sections.map((el) => ({ name: el.dataset.chapter, label: el.dataset.label || el.dataset.chapter })));
+mountNav(sections.map((el) => ({ name: el.dataset.chapter, label: el.dataset.label || el.dataset.chapter, group: el.dataset.group || 'connects' })));
 
 const soundBtn = document.getElementById('sound-toggle');
 soundBtn.addEventListener('click', () => {
@@ -239,6 +239,16 @@ addEventListener('scroll', () => {
 
 // Breath hint text under the hero
 const hint = document.getElementById('breath-word');
-if (hint) breath.onPhase((p) => { hint.textContent = p === 'inhale' ? 'inhale' : 'exhale'; });
+if (hint) breath.onPhase((p) => { hint.textContent = p; });
+
+// The river along the bottom edge grows with the journey.
+const river = document.querySelector('#river i');
+function updateRiver() {
+  const max = document.documentElement.scrollHeight - innerHeight;
+  river.style.width = (max > 0 ? Math.min(100, (scrollY / max) * 100) : 0).toFixed(2) + '%';
+}
+addEventListener('scroll', updateRiver, { passive: true });
+addEventListener('resize', updateRiver);
+updateRiver();
 
 updateScene();

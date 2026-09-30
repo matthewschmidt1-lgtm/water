@@ -3,11 +3,11 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>WATER — it is always going somewhere</title>
+  <title>WATER — it's always going somewhere</title>
   <meta name="description" content="Follow one drop of water through clouds, rain, mountains, soil, trees, a glass, and the ocean. An interactive journey of water for every age.">
   <meta name="theme-color" content="#04111f">
   <meta property="og:title" content="WATER">
-  <meta property="og:description" content="It is always going somewhere. An interactive journey through the water cycle, for kids and grandparents alike.">
+  <meta property="og:description" content="It's always going somewhere. An interactive journey through the water cycle, for kids and grandparents alike.">
   <meta property="og:type" content="website">
   <meta property="og:url" content="https://water-production-4036.up.railway.app/">
   <meta property="og:image" content="https://water-production-4036.up.railway.app/og-image.png">
@@ -16,7 +16,7 @@
   <meta property="og:image:alt" content="A single glowing water drop hanging above a tide under a starry sky, with the word WATER.">
   <meta name="twitter:card" content="summary_large_image">
   <meta name="twitter:title" content="WATER">
-  <meta name="twitter:description" content="It is always going somewhere.">
+  <meta name="twitter:description" content="It's always going somewhere.">
   <meta name="twitter:image" content="https://water-production-4036.up.railway.app/og-image.png">
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cpath d='M16 3c5 8 10 12 10 18a10 10 0 0 1-20 0c0-6 5-10 10-18z' fill='%237ff2ff'/%3E%3C/svg%3E">
   <link rel="stylesheet" href="css/water.css">
@@ -36,27 +36,29 @@
     <canvas class="hero-canvas" id="hero-canvas"></canvas>
     <div class="hero-copy">
       <h1>WATER</h1>
-      <p>It is always going somewhere.</p>
+      <p>It's always going somewhere.</p>
       <div class="breath-hint"><span id="breath-word">inhale</span></div>
     </div>
     <div class="scroll-cue">follow it ↓</div>
   </header>
 
   <main>
-    <section class="chapter" id="cloud" data-chapter="cloud" data-label="Sky"></section>
-    <section class="chapter" id="rain" data-chapter="rain" data-label="Rain"></section>
-    <section class="chapter" id="mountain" data-chapter="mountain" data-label="Mountain"></section>
-    <section class="chapter" id="soil" data-chapter="soil" data-label="Soil"></section>
-    <section class="chapter" id="tree" data-chapter="tree" data-label="Tree"></section>
-    <section class="chapter" id="cup" data-chapter="cup" data-label="Cup"></section>
-    <section class="chapter" id="ocean" data-chapter="ocean" data-label="Ocean"></section>
-    <section class="chapter" id="lab" data-chapter="lab" data-label="Lab"></section>
-    <section class="chapter" id="you" data-chapter="you" data-label="You"></section>
+    <section class="chapter" id="cloud" data-chapter="cloud" data-group="returns" data-label="Sky"></section>
+    <section class="chapter" id="rain" data-chapter="rain" data-group="returns" data-label="Rain"></section>
+    <section class="chapter" id="mountain" data-chapter="mountain" data-group="connects" data-label="Mountain"></section>
+    <section class="chapter" id="soil" data-chapter="soil" data-group="connects" data-label="Soil"></section>
+    <section class="chapter" id="tree" data-chapter="tree" data-group="connects" data-label="Tree"></section>
+    <section class="chapter" id="cup" data-chapter="cup" data-group="connects" data-label="Cup"></section>
+    <section class="chapter" id="ocean" data-chapter="ocean" data-group="returns" data-label="Ocean"></section>
+    <section class="chapter" id="lab" data-chapter="lab" data-group="changes" data-label="Lab"></section>
+    <section class="chapter" id="you" data-chapter="you" data-group="connects" data-label="You"></section>
   </main>
 
   <footer>
     <p class="motto">Water changes.<br>Water connects.<br>Water returns.</p>
   </footer>
+
+  <div id="river" aria-hidden="true"><i></i></div>
 
   <div class="bottom-bar">
     <button id="where-btn" class="btn">Where is water?</button>

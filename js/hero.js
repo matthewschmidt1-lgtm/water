@@ -97,11 +97,11 @@ function frame(now) {
   // The droplet: appears after a quiet second, hangs, then falls.
   if (!landed) {
     if (reduced) { landed = true; ripples.push({ x: cx, y: level, t: 0 }); }
-    else if (t > 1.0) {
-      const hang = Math.min(1, (t - 1.0) / 1.6);       // 1.6s to fade in and hang
+    else if (t > 3.4) {
+      const hang = Math.min(1, (t - 3.4) / 1.6);       // 1.6s to fade in and hang
       const r = 9 + Math.sin(t * 3) * 0.6;
       const y = h * 0.28 + Math.sin(t * 2) * 2;
-      if (t < 2.8) {
+      if (t < 5.4) {
         c.globalAlpha = hang; drawDrop(cx, y, r); c.globalAlpha = 1; dropY = y;
       } else {
         dropV += 0.0022 * dt; dropY += dropV * dt;
@@ -115,7 +115,9 @@ function frame(now) {
       }
     }
   }
-  if (landed && !revealed) { revealed = true; hero.classList.add('revealed'); }
+  // The word first. Then the drop. Then, once it has landed, the invitation.
+  if (!revealed && (t > 0.9 || reduced)) { revealed = true; hero.classList.add('revealed'); }
+  if (landed && !hero.classList.contains('landed')) hero.classList.add('landed');
 
   // Ripples: ellipses expanding on the surface, fading.
   for (let i = ripples.length - 1; i >= 0; i--) {

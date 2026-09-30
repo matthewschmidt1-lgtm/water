@@ -1,6 +1,6 @@
 # WATER
 
-*It is always going somewhere.*
+*It's always going somewhere.*
 
 An interactive journey of water for every age: cloud → rain → mountain → soil → tree → cup → ocean → lab → you.
 The whole site breathes on one 10‑second clock. Everything is procedural (Canvas 2D, CSS, Web Audio); there are no images, videos, audio files, or libraries.
