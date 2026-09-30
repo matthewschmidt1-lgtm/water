@@ -177,6 +177,8 @@ function drawTaps(c, dt) {
   c.globalAlpha = 1;
 }
 
+let runs = 0, idle = 0;
+
 export default {
   mount(el, ctx) {
     c = ctx.c2d; reduced = ctx.reduced; audio = ctx.audio;
@@ -187,7 +189,6 @@ export default {
       <h2>Follow one drop downhill.</h2>
       <p class="lede">Snow on the peak. Sun in the morning. A drop lets go and starts to slide.</p>
       <div class="controls">
-        <button class="btn follow-drop">Follow me</button>
         <label>Right now<span class="value readout">waiting on the peak</span></label>
       </div>
       <div class="depth" data-level="1">
@@ -198,8 +199,8 @@ export default {
       </div>`;
     el.appendChild(body);
     readout = body.querySelector('.readout');
-    let k = 0;
-    body.querySelector('.follow-drop').addEventListener('click', () => startDrop(k++));
+    // The melt runs on its own: a drop lets go a moment after you arrive, and another whenever the last has reached the sea.
+    ctx.canvas.addEventListener('pointerdown', () => { if (!drop.active) startDrop(runs++); });
     layout(ctx);
     ctx.canvas.addEventListener('pointerdown', (e) => addTap(ctx.canvas, e, audio));
     offPhase = ctx.breath.onPhase((p) => { if (p === 'exhale' && !reduced) for (let i = 0; i < 4; i++) spark(); });
@@ -208,6 +209,7 @@ export default {
   tick(dt, breath, ctx) {
     t += dt;
     const b = breath.value;
+    if (!drop.active) { idle += dt; if (idle > (runs === 0 ? 1800 : 14000)) { idle = 0; startDrop(runs++); } } else idle = 0;
     if (drop.active) advanceDrop(dt);
     const camTarget = drop.active && !reduced ? Math.max(-PAN, Math.min(PAN, w / 2 - drop.x)) : 0;
     camX += (camTarget - camX) * Math.min(1, dt * 0.0025);

@@ -13,6 +13,7 @@ const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
 
 let trickleAcc = 0, burstLeft = 0, burstAcc = 0, time = 0;
 let stageEl = null, shownStage = -1, burstDone = 0;
+let started = false, inhaling = false, breaths = 0;
 
 // node: { x1,y1,x2,y2, len, depth, parent, children[], root:boolean }
 const P = new Array(MAX);
@@ -177,7 +178,6 @@ export default {
         <p class="chapter-kicker">Tree</p>
         <h2>Water climbs a tree without a pump.</h2>
         <p class="lede">Tap the tree and follow the water. It goes in at the bottom and leaves at the top.</p>
-        <div class="controls"><button class="btn send-up">Send water up</button></div>
         <div class="stage-wrap">the water is in<span class="stage">waiting for water</span></div>
         <div class="depth" data-level="1">
           <p class="l1">LOOK: water goes in at the roots and out at the leaves.</p>
@@ -187,11 +187,13 @@ export default {
         </div>
       </div>`);
     stageEl = el.querySelector('.stage');
-    el.querySelector('.send-up').addEventListener('click', burst);
     ctx.canvas.addEventListener('pointerdown', burst);
   },
   tick(dt, breath) {
     time += dt;
+    // The first climb starts on its own; another goes up on every third breath.
+    if (!started) { started = true; setTimeout(burst, 1200); }
+    if (breath.phase === 'inhale' && !inhaling) { inhaling = true; if (++breaths % 3 === 0) burst(); } else if (breath.phase !== 'inhale') inhaling = false;
     trickleAcc += dt;
     const gap = ctx.reduced ? 700 : 260;
     while (trickleAcc > gap) { trickleAcc -= gap; spawn(false); }

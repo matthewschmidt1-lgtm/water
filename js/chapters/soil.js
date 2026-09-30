@@ -105,7 +105,9 @@ function buildStatic() {
   }
 }
 
+let hintEl = null;
 function spawn(x) {
+  if (hintEl) { hintEl.classList.add('gone'); hintEl = null; }
   for (let i = 0; i < MAX; i++) {
     const p = P[i];
     if (p.alive) continue;
@@ -269,6 +271,9 @@ export default {
           <button class="depth-more">Discover</button>
         </div>
       </div>`);
+    hintEl = document.createElement('p'); hintEl.className = 'scene-hint'; hintEl.textContent = 'hold the sky';
+    hintEl.style.left = '50%'; hintEl.style.transform = 'translateX(-50%)'; hintEl.style.top = '22px';
+    el.appendChild(hintEl);
     readout.run = el.querySelector('[data-r="run"]');
     readout.soak = el.querySelector('[data-r="soak"]');
     readout.evap = el.querySelector('[data-r="evap"]');
