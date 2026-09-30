@@ -26,14 +26,23 @@ function layout() {
   }
 }
 
+// Deep-water dispersion: omega = sqrt(g k), so long swells outrun short chop, and everything travels the same way
+// (toward the shore on the left). Crests are trochoidal (Gerstner): narrow and peaked, troughs broad and flat,
+// which is what makes foam appear only on the steep faces of the biggest crests.
+const W0 = 0.0045, OM = 0.55;
+const om = (k) => OM * Math.sqrt(k / W0);
 function waveY(k, x, amp, phase) {
-  // depth 0 (far) .. 1 (near): nearer bands are bigger and slower
+  // depth 0 (far) .. 1 (near): nearer bands are bigger and longer
   const d = k / (BANDS - 1);
   const s = 1 + d * 2.2;
-  const big = Math.sin(x * 0.0045 / s + t * 0.55 + phase) * 12 * s;
-  const mid = Math.sin(x * 0.014 / s - t * 1.1 + phase * 2.1) * 4.5 * s
-            + Math.sin(x * 0.021 / s + t * 0.8 - phase) * 2.2 * s;
-  const tiny = Math.sin(x * 0.09 - t * 3.1 + phase * 3) * 0.6 * (0.4 + wind);
+  const k1 = 0.0045 / s, k2 = 0.014 / s, k3 = 0.021 / s;
+  const th1 = x * k1 + t * om(k1) * 1.0 + phase;
+  const th2 = x * k2 + t * om(k2) * 1.0 + phase * 2.1;
+  const th3 = x * k3 + t * om(k3) - phase;
+  const steep = 0.35 + wind * 0.45;                    // wind steepens the sea
+  const big = Math.sin(th1 + steep * Math.cos(th1)) * 12 * s;
+  const mid = Math.sin(th2 + steep * 0.8 * Math.cos(th2)) * 4.5 * s + Math.sin(th3) * 2.2 * s;
+  const tiny = Math.sin(x * 0.09 + t * om(0.09) * 0.6 + phase * 3) * 0.6 * (0.4 + wind);
   return (big + mid) * amp + tiny;
 }
 
@@ -186,14 +195,15 @@ export default {
       const rp = ripples[i];
       if (rp.t < 0) continue;
       rp.t += dts;
-      const a = 1 - rp.t / 2.6;
-      if (a <= 0) { rp.t = -1; continue; }
-      const R = 6 + rp.t * 70;
-      c.strokeStyle = `rgba(127,242,255,${a * 0.7})`; c.lineWidth = 1.5;
+      const u = rp.t / 2.6;
+      if (u >= 1) { rp.t = -1; continue; }
+      const R = 6 + 120 * (1 - Math.exp(-rp.t * 1.1));                // leaves quickly, slows as it spreads
+      const a = (1 - u) * (1 - u) * 1.1 / Math.sqrt(1 + R * 0.06);   // amplitude falls with the circle's growth
+      c.strokeStyle = `rgba(127,242,255,${a})`; c.lineWidth = 1.5 - 0.6 * u;
       c.beginPath(); c.ellipse(rp.x, rp.y + shift, R, R * 0.3, 0, 0, Math.PI * 2); c.stroke();
-      if (rp.t > 0.5) {
-        c.strokeStyle = `rgba(127,242,255,${a * 0.35})`;
-        c.beginPath(); c.ellipse(rp.x, rp.y + shift, R * 0.55, R * 0.16, 0, 0, Math.PI * 2); c.stroke();
+      if (rp.t > 0.4) {
+        c.strokeStyle = `rgba(127,242,255,${a * 0.45})`;
+        c.beginPath(); c.ellipse(rp.x, rp.y + shift, R * 0.62, R * 0.62 * 0.3, 0, 0, Math.PI * 2); c.stroke();
       }
     }
   },

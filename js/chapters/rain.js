@@ -11,12 +11,13 @@ const MODES = {
 const LABELS = { drizzle: 'Drizzle', rain: 'Rain', downpour: 'Downpour', storm: 'Storm' };
 
 const X = new Float32Array(MAX), Y = new Float32Array(MAX), S = new Float32Array(MAX), L = new Float32Array(MAX);
-const RX = new Float32Array(MAX_RINGS), RY = new Float32Array(MAX_RINGS), RT = new Float32Array(MAX_RINGS);
+const RX = new Float32Array(MAX_RINGS), RY = new Float32Array(MAX_RINGS), RT = new Float32Array(MAX_RINGS), RS = new Float32Array(MAX_RINGS);
+const DD = new Float32Array(MAX);   // relative drop diameter
 let ringHead = 0, ringCount = 0;
 
 let c, w, h, reduced, audio;
 let mode = MODES.rain;
-let t = 0, wind = 0;
+let t = 0, wind = 0, dens = 140;   // dens: how many streaks are in the air; eases, so a weather change arrives as a front
 let flash = 0, nextFlash = 6000;
 let puddleY = 0;
 let skyGrad = null, puddleGrad = null, horizonGrad = null;
@@ -24,8 +25,12 @@ let skyGrad = null, puddleGrad = null, horizonGrad = null;
 function seed(i) {
   X[i] = Math.random() * w;
   Y[i] = -Math.random() * h;
-  S[i] = 0.8 + Math.random() * 0.45;
-  L[i] = 0.8 + Math.random() * 0.5;
+  // Many small drops, few big ones. Terminal velocity grows roughly with the square root of diameter,
+  // and the streak a camera sees is speed times exposure, so big drops are quicker AND longer.
+  const r = Math.random();
+  DD[i] = 0.45 + 1.15 * r * r;
+  S[i] = Math.sqrt(DD[i]);
+  L[i] = S[i] * (0.92 + Math.random() * 0.16);
 }
 
 function layout(ctx) {
@@ -42,11 +47,11 @@ function layout(ctx) {
   puddleGrad.addColorStop(0, '#16456a');
   puddleGrad.addColorStop(0.12, '#0b3352');
   puddleGrad.addColorStop(1, '#04111f');
-  for (let i = 0; i < MAX; i++) seed(i);
+  for (let i = 0; i < MAX; i++) { seed(i); if (i >= dens) Y[i] = -1e6; }
 }
 
-function ring(x, y) {
-  RX[ringHead] = x; RY[ringHead] = y; RT[ringHead] = 0;
+function ring(x, y, size = 1) {
+  RX[ringHead] = x; RY[ringHead] = y; RT[ringHead] = 0; RS[ringHead] = size;
   ringHead = (ringHead + 1) % MAX_RINGS;
   if (ringCount < MAX_RINGS) ringCount++;
 }
@@ -106,21 +111,27 @@ export default {
     const windTarget = (mode.wind + gust) * (1 - 0.35 * b);
     wind += (windTarget - wind) * Math.min(1, dt * 0.002);
     const speedMul = (reduced ? 0.4 : 1) * (1.06 - 0.16 * b);
-    const n = mode.n;
+    dens += (mode.n - dens) * Math.min(1, dt * 0.0008);
     const len = mode.len;
 
-    // Rain: one path, one stroke.
+    // Rain: one path, one stroke. Streaks beyond the current density are parked until they are wanted,
+    // and a parked one re-enters from the top of the sky, so heavier weather arrives as a front.
     c.strokeStyle = `rgba(190,225,240,${mode.alpha})`;
     c.lineWidth = mode.width;
     c.lineCap = 'round';
     c.beginPath();
-    for (let i = 0; i < n; i++) {
+    for (let i = 0; i < MAX; i++) {
+      if (Y[i] < -5000) {
+        if (i >= dens) continue;
+        Y[i] = -len * L[i] - Math.random() * h * 0.45; X[i] = Math.random() * w - wind * h;
+      }
       const sp = mode.speed * S[i] * speedMul;
       Y[i] += sp * dt;
-      X[i] += wind * sp * dt;
+      X[i] += wind * sp * dt * (1.35 - 0.4 * S[i]);      // small drops have little inertia and follow the air
       const land = puddleY + (i % 7) * 3;
       if (Y[i] > land) {
-        if (Math.random() < 0.12) ring(((X[i] % w) + w) % w, land + Math.random() * 6);
+        if (Math.random() < 0.14) ring(((X[i] % w) + w) % w, land + Math.random() * 6, 0.35 + 0.65 * DD[i] / 1.6);
+        if (i >= dens) { Y[i] = -1e6; continue; }
         Y[i] = -len * L[i] - Math.random() * 60;
         X[i] = Math.random() * w - wind * h;
       }
@@ -132,14 +143,20 @@ export default {
     c.stroke();
 
     // Ripples on the puddle.
-    c.lineWidth = 1;
     for (let k = 0; k < ringCount; k++) {
       RT[k] += dt;
-      const age = RT[k] / 1100;
+      const sz = RS[k] || 1, age = RT[k] / (800 + 600 * sz);
       if (age >= 1) continue;
-      const R = 4 + age * 34;
-      c.strokeStyle = `rgba(127,242,255,${(1 - age) * 0.55})`;
+      const e = 1 - (1 - age) * (1 - age);             // capillary ripples spread fast, then slow
+      const R = 3 + (10 + 34 * sz) * e;
+      const a = (1 - age) * (1 - age) * 0.6 * (0.45 + 0.55 * sz) / (1 + R * 0.025);   // energy spreads around a growing circle
+      c.lineWidth = 1.3 - 0.6 * age;
+      c.strokeStyle = `rgba(127,242,255,${a})`;
       c.beginPath(); c.ellipse(RX[k], RY[k], R, R * 0.28, 0, 0, Math.PI * 2); c.stroke();
+      if (age > 0.12) {                                  // a trailing crest behind the leading one
+        c.strokeStyle = `rgba(127,242,255,${a * 0.45})`;
+        c.beginPath(); c.ellipse(RX[k], RY[k], R * 0.62, R * 0.62 * 0.28, 0, 0, Math.PI * 2); c.stroke();
+      }
     }
 
     // Lightning: storm only, every 4–9 s, a short white breath over everything.

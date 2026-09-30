@@ -29,7 +29,7 @@ let x0 = 0, x1 = 0;          // horizontal extent of the generated scene
 // Drop journey
 const drop = { active: false, route: null, nStream: 0, i: 0, u: 0, x: 0, y: 0, stage: '' };
 const sparks = [];
-for (let i = 0; i < MAX_SPARK; i++) sparks.push({ x: 0, y: 0, life: 0, max: 1, active: false });
+for (let i = 0; i < MAX_SPARK; i++) sparks.push({ x: 0, y: 0, vy: 0, life: 0, max: 1, active: false });
 
 function rng(seed) { let s = seed >>> 0; return () => { s = (s + 0x6D2B79F5) >>> 0; let z = s; z = Math.imul(z ^ (z >>> 15), z | 1); z ^= z + Math.imul(z ^ (z >>> 7), z | 61); return ((z ^ (z >>> 14)) >>> 0) / 4294967296; }; }
 
@@ -144,7 +144,7 @@ function spark() {
     const s = sparks[i];
     if (s.active) continue;
     s.active = true; s.x = peakX + (Math.random() - 0.5) * w * 0.22; s.y = peakY + Math.random() * (snowY - peakY);
-    s.life = 0; s.max = 1500 + Math.random() * 1200; return;
+    s.life = 0; s.vy = 0.004; s.max = 1500 + Math.random() * 1200; return;
   }
 }
 
@@ -240,6 +240,7 @@ export default {
     c.strokeStyle = `rgba(127,242,255,${0.6 + b * 0.25})`;
     c.lineWidth = 1.2;
     for (let i = 0; i < streamPaths.length; i++) c.stroke(streamPaths[i]);
+    c.lineDashOffset = flowOff * 0.55;   // the wide, shallow river runs slower than the steep streams
     c.lineWidth = 2.4; c.stroke(riverPath);
     c.setLineDash([]);
 
@@ -249,10 +250,10 @@ export default {
       if (!s.active) continue;
       s.life += dt;
       if (s.life >= s.max) { s.active = false; continue; }
-      s.y += 0.018 * dt;
+      s.vy = (s.vy || 0) + 0.00004 * dt; s.y += s.vy * dt;   // meltwater drips and accelerates under gravity
       const k = s.life / s.max;
-      c.fillStyle = `rgba(244,249,251,${(1 - k) * (0.5 + 0.5 * Math.sin(s.life * 0.02))})`;
-      c.beginPath(); c.arc(s.x, s.y, 1.6, 0, Math.PI * 2); c.fill();
+      c.fillStyle = `rgba(219,240,250,${Math.min(1, k * 6) * (1 - k) * 0.8})`;
+      c.beginPath(); c.ellipse(s.x, s.y, 1.3, 1.3 + Math.min(3, s.vy * 40), 0, 0, Math.PI * 2); c.fill();
     }
 
     // The travelling drop.

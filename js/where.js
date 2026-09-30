@@ -241,13 +241,15 @@ export function mountWhere({ reduced } = {}) {
       draw(dt) {
         t += dt;
         const cx = w / 2, cy = h * 0.5, m = Math.min(w, h);
-        const k = Math.min(1, t / 4.2), L = m * 0.26 * (1 - Math.pow(1 - k, 3)), rot = t * 0.03, b = breath.value;
+        // Dendrites: the tips race outward first (fast, then slowing as latent heat builds), and side branches only
+        // start once the tip has passed them, growing out behind it.
+        const k = Math.min(1, t / 4.2), LF = m * 0.26, L = LF * (1 - Math.pow(1 - k, 3)), rot = t * 0.03, b = breath.value;
         c.strokeStyle = ACC; c.lineWidth = 1.4; A(0.85); c.beginPath();
         for (let i = 0; i < 6; i++) {
           const a = i * Math.PI / 3 + rot, dx = Math.cos(a), dy = Math.sin(a);
           c.moveTo(cx, cy); c.lineTo(cx + dx * L, cy + dy * L);
           for (const f of [0.34, 0.6, 0.82]) {
-            const bx = cx + dx * L * f, by = cy + dy * L * f, bl = L * 0.3 * (1 - f * 0.5);
+            const bx = cx + dx * L * f, by = cy + dy * L * f, bl = LF * 0.3 * (1 - f * 0.5) * Math.min(1, Math.max(0, (L / LF - f) / 0.22));
             for (const s of [-1, 1]) { const a2 = a + s * Math.PI / 3; c.moveTo(bx, by); c.lineTo(bx + Math.cos(a2) * bl, by + Math.sin(a2) * bl); }
           }
         }
@@ -426,8 +428,10 @@ export function mountWhere({ reduced } = {}) {
         const lift = 8 + 70 * Math.max(0, breath.velocity * 1000) + 10 * breath.value;
         c.fillStyle = '#cfefff';
         for (let i = 0; i < N; i++) {
-          Y[i] -= lift * dt; L[i] += S[i] * dt * (0.6 + breath.value); if (L[i] >= 1) spawn(i, false);
-          A(Math.sin(Math.PI * L[i]) * 0.07); c.beginPath(); c.arc(X[i], Y[i], R[i], 0, TAU); c.fill();
+          // vapor is buoyant at first, then mixes into the air: it slows, spreads wide and thins out rather than rising as a column
+          const l = L[i]; Y[i] -= lift * (1 - 0.75 * l) * dt; X[i] += 6 * l * dt * (i & 1 ? 1 : -1) * 0.5;
+          L[i] += S[i] * dt * (0.6 + breath.value); if (L[i] >= 1) spawn(i, false);
+          A(Math.sin(Math.PI * Math.pow(l, 0.7)) * 0.07 * (1.15 - 0.6 * l)); c.beginPath(); c.arc(X[i], Y[i], R[i] * (0.55 + 0.9 * l), 0, TAU); c.fill();
         }
         c.fillStyle = '#eafcff'; A(0.55); c.beginPath();
         for (let i = 0; i < N; i += 2) { const x = X[i] + Math.sin(t + i) * 4; c.moveTo(x + 1.5, Y[i]); c.arc(x, Y[i] - 10, 1.5, 0, TAU); }

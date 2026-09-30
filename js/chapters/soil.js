@@ -21,6 +21,7 @@ let counts = { run: 0, soak: 0, evap: 0 };
 let shown = { run: -1, soak: -1, evap: -1, table: -1 };
 let readout = {};
 let mistAcc = 0, time = 0;
+let perch = 0;                 // 0..1 how much water is standing on top of the dense layer
 
 // Preallocated particles: type 0 fall, 1 runoff, 2 infiltrate, 3 evaporate
 const P = new Array(MAX);
@@ -136,15 +137,24 @@ function step(dt, breath) {
       p.vx += 0.00004 * dt; p.x += p.vx * dt; p.y = surfaceAt(p.x) - 1;
       if (p.x > w + 4) p.alive = false;
     } else if (p.type === 2) {
-      const inClay = p.y > L.top;
-      const sp = ground.sink * (inClay ? 0.022 : 0.05) * sinkMul;
-      p.y += sp * dt; p.x += Math.sin(p.age * 0.004 + i) * 0.02 * dt;
+      // Water moves quickly through the open topsoil, stalls where it meets the tight subsoil, spreads sideways
+      // along it (downslope, to the right) and only slowly leaks through. That standing film is a perched water table.
+      const above = p.y < L.top - 3, inLayer = p.y >= L.top;
+      const k = above ? 0.05 : inLayer ? 0.011 : 0.012;
+      const sp = ground.sink * k * sinkMul;
+      if (above) { p.y += sp * dt; p.vx += (0 - p.vx) * Math.min(1, dt * 0.004); }
+      else if (!inLayer) { p.y = Math.min(p.y + sp * dt, L.top - 0.5); p.vx += ((0.006 + (i % 5) * 0.004) - p.vx) * Math.min(1, dt * 0.002); perch = Math.min(1, perch + 0.00004 * dt * ground.infil); }
+      else { p.y += sp * dt; p.vx += (0.004 - p.vx) * Math.min(1, dt * 0.002); }
+      if (!above && !inLayer && p.age > (4500 + (i % 5) * 900) / Math.max(0.5, ground.sink)) p.y = L.top + 0.3;   // breaks through after a wait
+      p.x += p.vx * dt + Math.sin(p.age * 0.004 + i) * 0.006 * dt;
+      if (p.x > w + 4) p.alive = false;
       if (p.y >= tableY()) { p.alive = false; table = Math.min(1, table + 0.006); }
     } else {
       p.y += p.vy * dt; p.x += p.vx * dt; p.a = Math.max(0, 1 - p.age / 2600);
       if (p.a <= 0) p.alive = false;
     }
   }
+  perch = Math.max(0, perch - dt * 0.000012);
   // mist rising from the surface on exhale
   const exhaling = !inhale && !ctx.reduced;
   if (exhaling) {
@@ -188,6 +198,11 @@ function draw(breath) {
     c.beginPath(); c.moveTo(0, ty); c.lineTo(w, ty); c.stroke();
   }
   c.drawImage(stat, 0, 0, w, h);
+  if (perch > 0.02) {       // the wet film sitting on the dense layer
+    const fg = c.createLinearGradient(0, L.top - 14, 0, L.top + 2);
+    fg.addColorStop(0, 'rgba(127,242,255,0)'); fg.addColorStop(1, `rgba(127,242,255,${perch * (0.3 + breath.value * 0.08)})`);
+    c.fillStyle = fg; c.fillRect(0, L.top - 14, w, 16);
+  }
   // particles
   for (let i = 0; i < MAX; i++) {
     const p = P[i];

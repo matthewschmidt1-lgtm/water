@@ -368,16 +368,27 @@ export default {
       c.globalAlpha = 1;
     }
 
-    // ICE
+    // ICE: freezing starts at the rim and the front creeps inward (cold walls first, then a ring of crystal);
+    // melting starts at the rim too, so the ice pulls in and shrinks away from the edge.
     if (iceAmt > 0.01) {
-      c.globalAlpha = iceAmt;
+      const e = iceAmt * iceAmt * (3 - 2 * iceAmt), frz = temp < tf;
+      const inner = frz ? 1 - e : 0, outer = frz ? 1 : 0.35 + 0.65 * e;
+      c.globalAlpha = Math.min(1, iceAmt * 3);
       c.save(); c.translate(bx, bcy); c.scale(hr, hr);
       c.fillStyle = gIce; c.strokeStyle = 'rgba(244,249,251,0.8)'; c.lineWidth = 1.2 / hr;
       c.beginPath();
-      for (let i = 0; i < 6; i++) { const a = PI / 6 + i * PI / 3; i ? c.lineTo(Math.cos(a), Math.sin(a)) : c.moveTo(Math.cos(a), Math.sin(a)); }
-      c.closePath(); c.fill(); c.stroke(); c.restore();
+      for (let i = 0; i < 6; i++) { const a = PI / 6 + i * PI / 3; i ? c.lineTo(Math.cos(a) * outer, Math.sin(a) * outer) : c.moveTo(Math.cos(a) * outer, Math.sin(a) * outer); }
+      c.closePath();
+      if (inner > 0.02) for (let i = 0; i < 6; i++) { const a = PI / 6 + i * PI / 3; i ? c.lineTo(Math.cos(a) * inner, Math.sin(a) * inner) : c.moveTo(Math.cos(a) * inner, Math.sin(a) * inner); }
+      if (inner > 0.02) c.closePath();
+      c.fill('evenodd'); c.stroke(); c.restore();
       c.fillStyle = `rgba(11,51,82,${0.55 + b * 0.15})`;
-      for (let i = 0; i < lattice.length; i += 2) { c.beginPath(); c.arc(bx + lattice[i], bcy + lattice[i + 1], 1.6, 0, 7); c.fill(); }
+      const lo = hr * inner, hi = hr * outer;
+      for (let i = 0; i < lattice.length; i += 2) {
+        const dd = Math.hypot(lattice[i], lattice[i + 1]);
+        if (dd < lo || dd > hi) continue;
+        c.beginPath(); c.arc(bx + lattice[i], bcy + lattice[i + 1], 1.6, 0, 7); c.fill();
+      }
       c.globalAlpha = 1;
     }
 

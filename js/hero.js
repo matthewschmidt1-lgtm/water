@@ -386,11 +386,18 @@ function frame(now) {
     if (!q.on) continue;
     q.t += dt / 1000;
     if (q.t < 0) continue;
-    const a = 1 - q.t / q.life;
-    if (a <= 0) { q.on = false; continue; }
-    const R = q.t * q.spd;
-    c.globalAlpha = a * q.a; c.lineWidth = q.lw;
+    const u = q.t / q.life;
+    if (u >= 1) { q.on = false; continue; }
+    // A ripple leaves fast and slows as its energy spreads: start speed is spd, reach is ~0.6 of the old linear run.
+    const tau = q.life * 0.8, R = q.spd * tau * (1 - Math.exp(-q.t / tau));
+    // the circle grows, so the same energy thins out: amplitude falls roughly as 1/sqrt(r)
+    const a = (1 - u) * (1 - u) * 1.3 / Math.sqrt(1 + R * 0.05);
+    c.globalAlpha = Math.min(1, a) * q.a; c.lineWidth = q.lw * (1 - 0.45 * u);
     c.beginPath(); c.ellipse(q.x, q.y, R, R * 0.22, 0, 0, Math.PI * 2); c.stroke();
+    if (u > 0.1 && q.lw > 1.2) {                      // the trailing crest of a real drop impact
+      c.globalAlpha *= 0.4;
+      c.beginPath(); c.ellipse(q.x, q.y, R * 0.66, R * 0.66 * 0.22, 0, 0, Math.PI * 2); c.stroke();
+    }
   }
   c.globalAlpha = 1;
 
