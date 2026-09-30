@@ -182,32 +182,60 @@ const follow = document.getElementById('follow');
 const followStep = follow.querySelector('.follow-step');
 const followWord = follow.querySelector('.follow-word');
 let followI = 0, followTimer = null;
+const followNext = follow.querySelector('.follow-next');
+const followCount = follow.querySelector('.follow-count');
+const LAST = FOLLOW.length - 1;
+function armTimer() {
+  clearInterval(followTimer);
+  followTimer = setInterval(() => {
+    if (followI >= LAST) { clearInterval(followTimer); followTimer = null; return; }
+    showFollow(followI + 1);
+  }, 5200);
+}
 function showFollow(i) {
-  followI = i % FOLLOW.length;
+  followI = Math.min(i, LAST);
   const s = FOLLOW[followI];
   followWord.textContent = s.word;
   followStep.textContent = s.text;
-  follow.querySelector('.follow-count').textContent = `${followI + 1} / ${FOLLOW.length}`;
+  followCount.textContent = `${followI + 1} / ${FOLLOW.length}`;
   followWord.classList.remove('pop'); void followWord.offsetWidth; followWord.classList.add('pop');
   if (s.chapter) {
     const target = document.getElementById(s.chapter);
     target?.scrollIntoView({ behavior: reduced ? 'auto' : 'smooth', block: 'center' });
   }
   audio.plip(1 + followI * 0.05);
+  // The loop closes where it began. Offer to go around once more rather than spinning forever.
+  const done = followI >= LAST;
+  followNext.textContent = done ? 'Begin again' : 'next ↓';
+  if (done) { followCount.textContent = 'One loop. Four billion years of them.'; clearInterval(followTimer); followTimer = null; }
 }
 function stopFollow() { follow.hidden = true; clearInterval(followTimer); followTimer = null; }
 followBtn.addEventListener('click', () => {
   follow.hidden = false;
   showFollow(0);
-  followTimer = setInterval(() => showFollow(followI + 1), 5200);
+  armTimer();
 });
-follow.querySelector('.follow-next').addEventListener('click', () => {
+followNext.addEventListener('click', () => {
+  if (followI >= LAST) { showFollow(0); armTimer(); return; }
   showFollow(followI + 1);
-  clearInterval(followTimer);
-  followTimer = setInterval(() => showFollow(followI + 1), 5200);
+  armTimer();
 });
 follow.querySelector('.follow-close').addEventListener('click', stopFollow);
 addEventListener('keydown', (e) => { if (e.key === 'Escape') { stopFollow(); whereCard.hidden = true; } });
+
+// Bottom bar steps aside while the reader scrolls down, and returns on scroll-up or after a pause.
+const bar = document.querySelector('.bottom-bar');
+let lastY = scrollY, barTimer = null;
+addEventListener('scroll', () => {
+  const y = scrollY;
+  const down = y > lastY + 4;
+  const up = y < lastY - 4;
+  if (down && y > 80) bar.classList.add('away');
+  else if (up) bar.classList.remove('away');
+  lastY = y;
+  clearTimeout(barTimer);
+  barTimer = setTimeout(() => bar.classList.remove('away'), 1100);
+}, { passive: true });
 
 // Breath hint text under the hero
 const hint = document.getElementById('breath-word');
