@@ -18,7 +18,14 @@ export function mountNav(items) {
     const a = e.target.closest('a');
     if (!a) return;
     e.preventDefault();
-    document.getElementById(a.dataset.name)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    const target = document.getElementById(a.dataset.name);
+    target?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    // Chapters between here and there mount (and grow) while we travel; settle on the target afterwards.
+    let taken = false;
+    ['touchstart', 'wheel', 'keydown'].forEach((ev) => addEventListener(ev, () => { taken = true; }, { once: true, passive: true }));
+    [1100, 2200].forEach((ms) => setTimeout(() => {
+      if (!taken && target && Math.abs(target.getBoundingClientRect().top) > 12) target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }, ms));
     root.classList.remove('open');
     btn.setAttribute('aria-expanded', 'false');
   });

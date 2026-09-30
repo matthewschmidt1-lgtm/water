@@ -77,8 +77,8 @@ export default {
 
     ctx.canvas.addEventListener('pointerdown', (e) => {
       const r = ctx.canvas.getBoundingClientRect();
-      const x = e.clientX - r.left, y = e.clientY - r.top;
-      if (y < horizon) return;
+      const x = e.clientX - r.left; let y = e.clientY - r.top;
+      if (y < horizon + 8) y = horizon + 8 + Math.random() * (H - horizon) * 0.2;
       let rp = ripples[0];
       for (let i = 0; i < MAX_RIPPLES; i++) if (ripples[i].t < 0) { rp = ripples[i]; break; }
       rp.x = x; rp.y = y; rp.t = 0;

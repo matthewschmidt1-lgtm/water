@@ -144,6 +144,35 @@ function setStage(i) {
   stageEl.classList.remove('pop'); void stageEl.offsetWidth; stageEl.classList.add('pop');
 }
 
+
+// Touch the water: a thin ring in the accent colour, like the ripples in hero.js.
+const TAPS = [];
+for (let i = 0; i < 4; i++) TAPS.push({ x: 0, y: 0, t: -1, col: '#7ff2ff' });
+let tapHead = 0;
+function addTap(canvas, e, audio) {
+  const r = canvas.getBoundingClientRect();
+  const tp = TAPS[tapHead]; tapHead = (tapHead + 1) % TAPS.length;
+  tp.x = e.clientX - r.left; tp.y = e.clientY - r.top; tp.t = 0;
+  tp.col = getComputedStyle(document.body).getPropertyValue('--accent').trim() || '#7ff2ff';
+  audio.plip(0.7 + Math.random() * 0.6);
+  return tp;
+}
+function drawTaps(c, dt) {
+  c.lineWidth = 1.5;
+  for (let i = 0; i < TAPS.length; i++) {
+    const tp = TAPS[i];
+    if (tp.t < 0) continue;
+    tp.t += dt / 1000;
+    const a = 1 - tp.t / 2.2;
+    if (a <= 0) { tp.t = -1; continue; }
+    const R = 6 + tp.t * 46;
+    c.strokeStyle = tp.col;
+    c.globalAlpha = a * 0.7; c.beginPath(); c.arc(tp.x, tp.y, R, 0, 7); c.stroke();
+    if (tp.t > 0.4) { c.globalAlpha = a * 0.35; c.beginPath(); c.arc(tp.x, tp.y, R * 0.55, 0, 7); c.stroke(); }
+  }
+  c.globalAlpha = 1;
+}
+
 export default {
   mount(section, context) {
     el = section; ctx = context; c = ctx.c2d; w = ctx.w; h = ctx.h;
@@ -174,6 +203,7 @@ export default {
         </div>
       </div>`);
     stageEl = el.querySelector('.stage-word');
+    ctx.canvas.addEventListener('pointerdown', (e) => addTap(ctx.canvas, e, ctx.audio));
     drinkBtn = el.querySelector('.drink');
     backBtn = el.querySelector('.back');
     drinkBtn.addEventListener('click', () => {
@@ -205,6 +235,7 @@ export default {
     }
     setStage(Math.round(zoom));
     draw(breath);
+    drawTaps(c, dt);
   },
   resize(context) { w = context.w; h = context.h; },
 };

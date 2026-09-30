@@ -126,7 +126,8 @@ export default {
 
     // Listen on the whole section so the cloud is touchable even where the copy overlaps it.
     const pos = (e) => { const r = el.getBoundingClientRect(); return [e.clientX - r.left, e.clientY - r.top]; };
-    el.addEventListener('pointerdown', (e) => { if (e.target.closest('button')) return; const [x, y] = pos(e); if (hit(x, y)) { speak(); inside = true; } });
+    el.addEventListener('pointerdown', (e) => { if (e.target.closest('button')) return; const [x, y] = pos(e); if (hit(x, y)) { speak(); inside = true; }
+      else if (y < h) { spawn(x, y, false, 0); spawn(x + 10, y + 4, false, 140); audio.plip(0.8 + Math.random() * 0.6); } });
     el.addEventListener('pointermove', (e) => {
       if (e.pointerType !== 'mouse') return;
       const [x, y] = pos(e);

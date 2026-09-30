@@ -8,7 +8,9 @@ import { mountNav } from './nav.js';
 import { WHERE, FOLLOW } from './content.js';
 
 const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
-const dpr = Math.min(devicePixelRatio || 1, 2);
+// Phones get a lighter canvas: 1.5x is plenty for soft gradients and thin rings, and saves ~45% of the pixels.
+const dprFor = () => Math.min(devicePixelRatio || 1, matchMedia('(max-width: 820px)').matches ? 1.5 : 2);
+let dpr = dprFor();
 
 // ---------- Chapter registry ----------
 // Chapter contract (js/chapters/<name>.js):
@@ -20,7 +22,13 @@ const dpr = Math.min(devicePixelRatio || 1, 2);
 //   }
 const chapters = new Map(); // name -> { el, mod, ctx, mounted, visible }
 const narrow = matchMedia('(max-width: 820px)');
-const SCENE_FRACTION = 0.62;
+// Phones: the scene band is 56-62% of the screen height (taller phones get the fuller band).
+// Keep in sync with the `var(--scene-h, 62vh)` fallback in css/water.css. The value is measured only on a
+// real resize, so a mobile URL bar sliding away never re-lays-out the scenes mid-scroll.
+const sceneFraction = (hh) => (hh < 700 ? 0.56 : hh < 820 ? 0.6 : 0.62);
+let sceneH = Math.round(innerHeight * sceneFraction(innerHeight));
+let lastW = innerWidth, lastH = innerHeight;
+document.documentElement.style.setProperty('--scene-h', sceneH + 'px');
 narrow.addEventListener('change', () => dispatchEvent(new Event('resize')));
 
 const sections = [...document.querySelectorAll('section.chapter[data-chapter]')];
@@ -36,7 +44,8 @@ function makeCtx(el) {
       const r = el.getBoundingClientRect();
       ctx.w = Math.max(1, Math.round(r.width));
       // On phones the scene is a band across the top and the copy flows below it (see css: --scene-h).
-      ctx.h = Math.max(1, Math.round(narrow.matches ? innerHeight * SCENE_FRACTION : r.height));
+      ctx.h = Math.max(1, Math.round(narrow.matches ? sceneH : r.height));
+      ctx.dpr = dpr;
       canvas.width = ctx.w * dpr;
       canvas.height = ctx.h * dpr;
       canvas.style.width = ctx.w + 'px';
@@ -56,6 +65,7 @@ async function load(name, el) {
     const mod = (await import(`./chapters/${name}.js`)).default;
     entry.ctx = makeCtx(el);
     entry.mod = mod;
+    bandWatch.observe(entry.ctx.canvas);
     mod.mount(el, entry.ctx);
     entry.mounted = true;
     el.classList.add('is-mounted');
@@ -66,7 +76,15 @@ async function load(name, el) {
   }
 }
 
-sections.forEach((el) => chapters.set(el.dataset.chapter, { el, mounted: false, visible: false }));
+sections.forEach((el) => chapters.set(el.dataset.chapter, { el, mounted: false, visible: false, band: true }));
+
+// On phones a chapter is tall but its scene is only a band at the top: stop drawing once the band is off screen.
+const bandWatch = new IntersectionObserver((entries) => {
+  entries.forEach((en) => {
+    const entry = chapters.get(en.target.parentElement.dataset.chapter);
+    if (entry) entry.band = en.isIntersecting;
+  });
+});
 
 // Preload when within one viewport; mark visible when on screen.
 const preloader = new IntersectionObserver((entries) => {
@@ -110,7 +128,7 @@ function loop(now) {
   last = now;
   if (!document.hidden) {
     chapters.forEach((entry) => {
-      if (entry.mounted && entry.visible) {
+      if (entry.mounted && entry.visible && entry.band) {
         try { entry.mod.tick(dt, breath, entry.ctx); } catch (e) { console.error(e); entry.visible = false; }
       }
     });
@@ -123,6 +141,13 @@ let resizeT;
 addEventListener('resize', () => {
   clearTimeout(resizeT);
   resizeT = setTimeout(() => {
+    // Mobile URL bars resize the viewport while scrolling; only a real change in shape re-lays-out the scenes.
+    const sameShape = innerWidth === lastW && Math.abs(innerHeight - lastH) < 160;
+    if (sameShape && narrow.matches) return;
+    lastW = innerWidth; lastH = innerHeight;
+    sceneH = Math.round(innerHeight * sceneFraction(innerHeight));
+    document.documentElement.style.setProperty('--scene-h', sceneH + 'px');
+    dpr = dprFor();
     chapters.forEach((entry) => {
       if (!entry.mounted) return;
       entry.ctx.resize();
@@ -201,7 +226,8 @@ function showFollow(i) {
   followWord.classList.remove('pop'); void followWord.offsetWidth; followWord.classList.add('pop');
   if (s.chapter) {
     const target = document.getElementById(s.chapter);
-    target?.scrollIntoView({ behavior: reduced ? 'auto' : 'smooth', block: 'center' });
+    // On phones, land with the scene band at the top so the overlay never sits over the art.
+    target?.scrollIntoView({ behavior: reduced ? 'auto' : 'smooth', block: narrow.matches ? 'start' : 'center' });
   }
   audio.plip(1 + followI * 0.05);
   // The loop closes where it began. Offer to go around once more rather than spinning forever.
@@ -225,16 +251,18 @@ addEventListener('keydown', (e) => { if (e.key === 'Escape') { stopFollow(); whe
 
 // Bottom bar steps aside while the reader scrolls down, and returns on scroll-up or after a pause.
 const bar = document.querySelector('.bottom-bar');
-let lastY = scrollY, barTimer = null;
+let lastY = scrollY, barTimer = null, upAcc = 0;
 addEventListener('scroll', () => {
   const y = scrollY;
-  const down = y > lastY + 4;
-  const up = y < lastY - 4;
-  if (down && y > 80) bar.classList.add('away');
-  else if (up) bar.classList.remove('away');
+  const dy = y - lastY;
   lastY = y;
+  if (dy > 0) upAcc = 0; else upAcc -= dy;
+  if (dy > 4 && y > 80) bar.classList.add('away');
+  // A deliberate scroll-up brings it back (a jittery thumb does not).
+  else if (dy < 0 && upAcc > (narrow.matches ? 90 : 4)) bar.classList.remove('away');
   clearTimeout(barTimer);
-  barTimer = setTimeout(() => bar.classList.remove('away'), 1100);
+  // On phones the bar does not creep back over the copy on its own: it returns on scroll-up, or at the very top.
+  barTimer = setTimeout(() => { if (!narrow.matches || scrollY <= 80) bar.classList.remove('away'); }, 1100);
 }, { passive: true });
 
 // Breath hint text under the hero

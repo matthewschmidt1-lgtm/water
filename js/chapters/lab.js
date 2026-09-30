@@ -59,6 +59,35 @@ function molecule(x, y, ang, s, a) {
   c.beginPath(); c.arc(x, y, s * 0.7, 0, 7); c.fill();
 }
 
+
+// Touch the water: a thin ring in the accent colour, like the ripples in hero.js.
+const TAPS = [];
+for (let i = 0; i < 4; i++) TAPS.push({ x: 0, y: 0, t: -1, col: '#7ff2ff' });
+let tapHead = 0;
+function addTap(canvas, e, audio) {
+  const r = canvas.getBoundingClientRect();
+  const tp = TAPS[tapHead]; tapHead = (tapHead + 1) % TAPS.length;
+  tp.x = e.clientX - r.left; tp.y = e.clientY - r.top; tp.t = 0;
+  tp.col = getComputedStyle(document.body).getPropertyValue('--accent').trim() || '#7ff2ff';
+  audio.plip(0.7 + Math.random() * 0.6);
+  return tp;
+}
+function drawTaps(c, dt) {
+  c.lineWidth = 1.5;
+  for (let i = 0; i < TAPS.length; i++) {
+    const tp = TAPS[i];
+    if (tp.t < 0) continue;
+    tp.t += dt / 1000;
+    const a = 1 - tp.t / 2.2;
+    if (a <= 0) { tp.t = -1; continue; }
+    const R = 6 + tp.t * 46;
+    c.strokeStyle = tp.col;
+    c.globalAlpha = a * 0.7; c.beginPath(); c.arc(tp.x, tp.y, R, 0, 7); c.stroke();
+    if (tp.t > 0.4) { c.globalAlpha = a * 0.35; c.beginPath(); c.arc(tp.x, tp.y, R * 0.55, 0, 7); c.stroke(); }
+  }
+  c.globalAlpha = 1;
+}
+
 export default {
   mount(section, ctx) {
     el = section; c = ctx.c2d; W = ctx.w; H = ctx.h;
@@ -82,7 +111,12 @@ export default {
       #lab .controls input[type=range] { width: 280px; max-width: 70vw; }
       #lab .ticks { position: relative; width: 280px; max-width: 70vw; height: 26px; font-size: 0.6rem; letter-spacing: 0.05em; color: var(--muted); }
       #lab .ticks span { position: absolute; transform: translateX(-50%); white-space: nowrap; }
-      @media (max-width: 480px) { #lab .ticks span.minor { display: none; } }
+      @media (max-width: 820px) {
+        #lab .controls input[type=range] { width: 100%; max-width: none; }
+        #lab .ticks { width: calc(100% - 28px); max-width: none; margin: 0 14px; font-size: 0.66rem; }
+        #lab .vol .bar { height: 44px; }
+      }
+      @media (max-width: 480px) { #lab .ticks span.minor { display: none; } #lab .ticks { height: 20px; } #lab .ticks span[style*="top:12px"] { top: 0 !important; } }
       #lab .vol { display: flex; flex-direction: column; gap: 6px; font-size: 0.72rem; letter-spacing: 0.25em; text-transform: uppercase; color: var(--muted); }
       #lab .vol .bar { width: 18px; height: 54px; border: 1px solid rgba(244,249,251,0.25); border-radius: 4px; display: flex; align-items: flex-end; overflow: hidden; }
       #lab .vol .bar i { display: block; width: 100%; height: 50%; background: var(--turquoise); transition: height 0.6s ease, background 0.6s; }
@@ -117,6 +151,7 @@ export default {
         <div class="mystery" hidden><p class="line"></p><p><span class="term">How?</span><span class="how"></span></p></div>
       </div>`);
 
+    ctx.canvas.addEventListener('pointerdown', (e) => addTap(ctx.canvas, e, ctx.audio));
     const range = el.querySelector('input[type=range]');
     const val = el.querySelector('.controls .value');
     const bar = el.querySelector('.vol .bar i');
@@ -250,5 +285,6 @@ export default {
     }
     c.fillStyle = 'rgba(244,249,251,0.45)'; c.font = '11px system-ui, sans-serif'; c.textAlign = 'center';
     c.fillText(iceAmt > 0.5 ? 'locked in a ring' : vapAmt > 0.5 ? 'flying free' : 'holding hands, letting go', mx, my + ring * 2.2 + 14);
+    drawTaps(c, dt);
   },
 };

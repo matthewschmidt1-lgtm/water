@@ -29,7 +29,7 @@ function layout() {
   top = narrow ? H * 0.07 : H * 0.5 - fh / 2;
   bottom = top + fh; fy = top + fh / 2;
   headR = fh * 0.11;
-  cloudX = narrow ? W * 0.12 : W * 0.42; cloudY = narrow ? H * 0.06 : H * 0.14;
+  cloudX = narrow ? W * 0.24 : W * 0.42; cloudY = narrow ? H * 0.17 : H * 0.14;   // clear of the drop menu on phones
   cupX = narrow ? W * 0.88 : Math.min(W - 40, fx + fw * 1.5); cupY = narrow ? top + fh * 0.9 : bottom - 6;
   figure = new Path2D();
   figure.arc(fx, top + headR, headR, 0, Math.PI * 2);
@@ -53,6 +53,35 @@ function seedOut(i) {
   const o = i * 4;
   pout[o] = fx + (Math.random() - 0.5) * headR; pout[o + 1] = top + headR * 1.3;
   pout[o + 2] = -Math.random() * 1.2; pout[o + 3] = Math.random() * 6.28;
+}
+
+
+// Touch the water: a thin ring in the accent colour, like the ripples in hero.js.
+const TAPS = [];
+for (let i = 0; i < 4; i++) TAPS.push({ x: 0, y: 0, t: -1, col: '#7ff2ff' });
+let tapHead = 0;
+function addTap(canvas, e, audio) {
+  const r = canvas.getBoundingClientRect();
+  const tp = TAPS[tapHead]; tapHead = (tapHead + 1) % TAPS.length;
+  tp.x = e.clientX - r.left; tp.y = e.clientY - r.top; tp.t = 0;
+  tp.col = getComputedStyle(document.body).getPropertyValue('--accent').trim() || '#7ff2ff';
+  audio.plip(0.7 + Math.random() * 0.6);
+  return tp;
+}
+function drawTaps(c, dt) {
+  c.lineWidth = 1.5;
+  for (let i = 0; i < TAPS.length; i++) {
+    const tp = TAPS[i];
+    if (tp.t < 0) continue;
+    tp.t += dt / 1000;
+    const a = 1 - tp.t / 2.2;
+    if (a <= 0) { tp.t = -1; continue; }
+    const R = 6 + tp.t * 46;
+    c.strokeStyle = tp.col;
+    c.globalAlpha = a * 0.7; c.beginPath(); c.arc(tp.x, tp.y, R, 0, 7); c.stroke();
+    if (tp.t > 0.4) { c.globalAlpha = a * 0.35; c.beginPath(); c.arc(tp.x, tp.y, R * 0.55, 0, 7); c.stroke(); }
+  }
+  c.globalAlpha = 1;
 }
 
 export default {
@@ -83,6 +112,11 @@ export default {
         </div>
       </div>`);
     body = el.querySelector('.chapter-body');
+    ctx.canvas.addEventListener('pointerdown', (e) => {
+      const tp = addTap(ctx.canvas, e, ctx.audio);
+      // Touch the figure and it drinks a little.
+      if (Math.abs(tp.x - fx) < fw * 0.7 && tp.y > top && tp.y < bottom) { level = Math.min(target + 12, level + 1.5); rate = 0.08; }
+    });
     pctEl = el.querySelector('.controls .value');
     noteEl = el.querySelector('.note');
     layout();
@@ -180,5 +214,6 @@ export default {
       c.textAlign = 'center';
       c.fillText(LINES[lineI], fx, bottom + 52);
     }
+    drawTaps(c, dt);
   },
 };

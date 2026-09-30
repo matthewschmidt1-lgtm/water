@@ -221,7 +221,8 @@ export default {
     el.style.background = '#0b2a44';
     el.insertAdjacentHTML('beforeend', `
       <style>
-        #soil .chapter-canvas { touch-action: none; cursor: crosshair; }
+        #soil .chapter-canvas { touch-action: none; cursor: crosshair; -webkit-touch-callout: none; }
+        @media (max-width: 820px) { #soil .chapter-canvas { touch-action: pan-y; } #soil .soil-readout { width: 100%; gap: 6px 12px; letter-spacing: 0.14em; } #soil .table-wrap { max-width: none; } }
         #soil .soil-readout { display: grid; grid-template-columns: repeat(3, auto); gap: 6px 22px; margin-top: 18px; font-size: 0.72rem; letter-spacing: 0.2em; text-transform: uppercase; color: var(--muted); width: max-content; }
         #soil .soil-readout b { display: block; color: var(--cyan); font-size: 1.2rem; font-weight: 400; letter-spacing: 0.05em; }
         #soil .ground-note { margin: 8px 0 0; color: var(--mist); font-size: 0.9rem; min-height: 1.4em; }

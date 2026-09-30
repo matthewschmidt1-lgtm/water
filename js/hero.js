@@ -5,13 +5,17 @@ import audio from './audio.js';
 const canvas = document.getElementById('hero-canvas');
 const c = canvas.getContext('2d');
 const hero = document.querySelector('.hero');
-const dpr = Math.min(devicePixelRatio || 1, 2);
+const narrowQ = matchMedia('(max-width: 820px)');
+let dpr = Math.min(devicePixelRatio || 1, narrowQ.matches ? 1.5 : 2);
 const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
 let w = 0, h = 0;
 
 function resize() {
   const r = hero.getBoundingClientRect();
-  w = Math.round(r.width); h = Math.round(r.height);
+  const nw = Math.round(r.width), nh = Math.round(r.height);
+  const nd = Math.min(devicePixelRatio || 1, narrowQ.matches ? 1.5 : 2);
+  if (nw === w && nh === h && nd === dpr) return;   // mobile URL bars fire resize while scrolling
+  w = nw; h = nh; dpr = nd;
   canvas.width = w * dpr; canvas.height = h * dpr;
   c.setTransform(dpr, 0, 0, dpr, 0, 0);
 }
@@ -47,6 +51,7 @@ function drawStars(t) {
 }
 
 const start = performance.now();
+let tVis = 0;
 const ripples = [];          // { x, y, t }
 let dropY = -20, dropV = 0, landed = false, revealed = false;
 let last = start;
@@ -64,7 +69,9 @@ function drawDrop(x, y, r) {
 
 function frame(now) {
   const dt = Math.min(now - last, 50); last = now;
-  const t = (now - start) / 1000;
+  // Count only the time the page has been on screen, so an intro opened in a background tab still plays in order.
+  tVis += dt / 1000;
+  const t = tVis;
   c.clearRect(0, 0, w, h);
   drawStars(reduced ? 0 : t);
   const cx = w / 2;
