@@ -265,7 +265,7 @@ export default {
       ctx.audio.plip(1.1);
     }));
     const cv = ctx.canvas;
-    cv.addEventListener('pointerdown', (e) => { pointerDown = true; px = e.clientX - cv.getBoundingClientRect().left; try { cv.setPointerCapture(e.pointerId); } catch (_) {} });
+    cv.addEventListener('pointerdown', (e) => { pointerDown = true; px = e.clientX - cv.getBoundingClientRect().left; for (let k = 0; k < 6; k++) spawn(px); try { cv.setPointerCapture(e.pointerId); } catch (_) {} });
     cv.addEventListener('pointermove', (e) => { if (pointerDown) px = e.clientX - cv.getBoundingClientRect().left; });
     const up = () => { pointerDown = false; };
     cv.addEventListener('pointerup', up); cv.addEventListener('pointercancel', up); cv.addEventListener('lostpointercapture', up);

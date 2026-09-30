@@ -19,6 +19,7 @@ export function mountNav(items) {
   document.addEventListener('scene', (e) => {
     list.querySelectorAll('a').forEach((a) => a.classList.toggle('active', a.dataset.name === e.detail));
   });
+  document.addEventListener('keydown', (e) => { if (e.key === 'Escape') { root.classList.remove('open'); btn.setAttribute('aria-expanded', 'false'); } });
   document.addEventListener('click', (e) => {
     if (!root.contains(e.target)) { root.classList.remove('open'); btn.setAttribute('aria-expanded', 'false'); }
   });

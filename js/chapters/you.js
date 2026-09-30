@@ -14,7 +14,7 @@ let el, body, c, W = 0, H = 0, t = 0;
 let fx = 0, fy = 0, fh = 0, fw = 0, headR = 0, top = 0, bottom = 0;   // figure geometry
 let cloudX = 0, cloudY = 0, cupX = 0, cupY = 0;
 let figure = null;                   // Path2D
-let target = 60, level = 60;         // percent
+let target = 60, level = 60, rate = 0.08;   // percent; rate = ease per second
 let lineI = 0, lineT = 0, offPhase = null;
 let pctEl = null, noteEl = null;
 const pin = new Float32Array(N_IN * 4);     // x, y, progress, seed
@@ -94,11 +94,11 @@ export default {
       chips.forEach((ch) => ch.setAttribute('aria-pressed', 'false'));
       chip.setAttribute('aria-pressed', 'true');
       const a = AGES[+chip.dataset.i];
-      target = a.pct; noteEl.textContent = a.note;
+      target = a.pct; rate = 1.6; noteEl.textContent = a.note;
       ctx.audio.plip(1 + a.pct / 200);
     }));
     el.querySelector('.btn').addEventListener('click', () => {
-      level = Math.min(target + 12, level + 3);
+      level = Math.min(target + 12, level + 3); rate = 0.08;
       ctx.audio.plip(0.8 + Math.random() * 0.3);
     });
     offPhase = ctx.breath.onPhase(() => { lineI = (lineI + 1) % LINES.length; lineT = 0; });
@@ -112,7 +112,7 @@ export default {
     const dts = dt / 1000, b = breath.value, inhale = breath.phase === 'inhale';
     if (!ctx.reduced) t += dts;
     lineT += dts;
-    level += (target - level) * Math.min(1, dts * 0.08);   // drift back slowly
+    level += (target - level) * Math.min(1, dts * rate);   // chips snap, drinks drift back slowly
     const shown = Math.round(level);
     if (pctEl.textContent !== shown + '%') pctEl.textContent = shown + '%';
 

@@ -198,7 +198,7 @@ export default {
       b.y -= b.s * 0.00035 * dt;
       if (b.y < 0.5 - level * 0.94 || level < 0.05) { b.y = 0.46; b.x = (Math.random() - 0.5) * 0.4; }
     }
-    const zs = ctx.reduced ? 0.0002 : 0.00038;
+    const zs = (ctx.reduced ? 0.0002 : 0.00038) * (zoomTarget < zoom ? 2.2 : 1);
     if (zoom !== zoomTarget) {
       zoom += Math.sign(zoomTarget - zoom) * Math.min(Math.abs(zoomTarget - zoom), zs * dt);
       if (zoom === 0 && zoomTarget === 0) { levelTarget = 0.82; drinkBtn.disabled = false; }

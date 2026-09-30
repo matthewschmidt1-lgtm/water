@@ -82,6 +82,7 @@ export default {
       #lab .controls input[type=range] { width: 280px; max-width: 70vw; }
       #lab .ticks { position: relative; width: 280px; max-width: 70vw; height: 26px; font-size: 0.6rem; letter-spacing: 0.05em; color: var(--muted); }
       #lab .ticks span { position: absolute; transform: translateX(-50%); white-space: nowrap; }
+      @media (max-width: 480px) { #lab .ticks span.minor { display: none; } }
       #lab .vol { display: flex; flex-direction: column; gap: 6px; font-size: 0.72rem; letter-spacing: 0.25em; text-transform: uppercase; color: var(--muted); }
       #lab .vol .bar { width: 18px; height: 54px; border: 1px solid rgba(244,249,251,0.25); border-radius: 4px; display: flex; align-items: flex-end; overflow: hidden; }
       #lab .vol .bar i { display: block; width: 100%; height: 50%; background: var(--turquoise); transition: height 0.6s ease, background 0.6s; }
@@ -100,7 +101,7 @@ export default {
         <p class="lede">Turn the dial. Cold, warm, hot. Watch one blob become three things.</p>
         <div class="controls">
           <label>Temperature <input type="range" min="-200" max="374" value="20" aria-label="Temperature in degrees Celsius">
-            <span class="ticks"><span style="left:0%">−200°</span><span style="left:26.1%;top:12px">−50°</span><span style="left:34.8%">0°</span><span style="left:38.3%;top:12px">20°</span><span style="left:43.6%">50°</span><span style="left:52.3%;top:12px">100°</span><span style="left:100%">374°C</span></span>
+            <span class="ticks"><span style="left:0%">−200°</span><span class="minor" style="left:26.1%;top:12px">−50°</span><span style="left:34.8%">0°</span><span class="minor" style="left:38.3%;top:12px">20°</span><span class="minor" style="left:43.6%">50°</span><span style="left:52.3%;top:12px">100°</span><span style="left:100%">374°C</span></span>
             <span class="value">20 °C · water</span></label>
           <div class="vol"><span>Volume</span><span class="bar"><i></i></span></div>
         </div>
