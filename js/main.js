@@ -240,9 +240,9 @@ if (cycle) {
     cc.beginPath(); for (let x = 0; x <= cw; x += 6) x ? cc.lineTo(x, level + Math.sin(x * 0.02 + t * 0.6) * 1.2) : cc.moveTo(x, level); cc.stroke();
     // one drop, once
     if (!landed) {
-      const fall = Math.max(0, t - 2.2);
+      const fall = Math.max(0, t - 0.6);
       const y = reduced ? level : ch * 0.18 + fall * fall * 260;
-      const a = Math.min(1, t / 1.6);
+      const a = Math.min(1, t / 0.5);
       if (y >= level || reduced) { landed = true; rings.push(t); audio.plip(1); }
       else { cc.globalAlpha = a; cc.fillStyle = '#bff4ff'; cc.beginPath(); cc.ellipse(cw / 2, y, 4, 5.5, 0, 0, Math.PI * 2); cc.fill(); cc.globalAlpha = 1; }
     }
