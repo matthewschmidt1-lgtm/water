@@ -12,6 +12,7 @@ export function mountNav(items) {
     const a = e.target.closest('a');
     if (!a) return;
     e.preventDefault();
+    document.dispatchEvent(new CustomEvent('water:open', { detail: a.dataset.name }));
     const target = document.getElementById(a.dataset.name);
     target?.scrollIntoView({ behavior: 'smooth', block: 'start' });
     // Chapters between here and there mount (and grow) while we travel; settle on the target afterwards.

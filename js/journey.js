@@ -67,6 +67,7 @@ export function mountJourney({ narrow, reduced, getSceneH }) {
   function startStep(id) {
     const s = id === '_end' ? END : MAP[id] || FOLLOW[0];
     F.node = s; F.form = s.form || 'drop'; F.count++;
+    document.dispatchEvent(new CustomEvent('water:open', { detail: s.chapter }));
     const el = document.getElementById(s.chapter);
     clearTimers(); hideChoices();
     followTerm.classList.remove('on'); followLine.classList.remove('on', 'cons');

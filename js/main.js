@@ -109,6 +109,7 @@ function updateScene() {
   const hero = document.querySelector('.hero');
   if (hero) { const r = hero.getBoundingClientRect(); bestD = Math.abs((r.top + r.bottom) / 2 - mid); }
   sections.forEach((el) => {
+    if (el.hidden) return;
     const r = el.getBoundingClientRect();
     const d = Math.abs((r.top + r.bottom) / 2 - mid);
     if (d < bestD) { bestD = d; best = el.dataset.chapter; }
@@ -261,6 +262,37 @@ if (cycle) {
     });
   }, { threshold: 0.5 }).observe(cycle);
   addEventListener('resize', () => { if (started) sizeCycle(); });
+}
+
+// Closer: Cup, Lab and You fold into one section. One opens at a time.
+const trio = document.getElementById('closer');
+if (trio) {
+  const tiles = [...trio.querySelectorAll('.tile')];
+  const closeBtn = trio.querySelector('.trio-close');
+  const folded = ['cup', 'lab', 'you'];
+  let openName = null;
+  function openChapter(name, scroll = true) {
+    if (!folded.includes(name)) return;
+    folded.forEach((n) => { const sec = document.getElementById(n); sec.hidden = n !== name; });
+    tiles.forEach((t) => t.setAttribute('aria-pressed', String(t.dataset.open === name)));
+    closeBtn.hidden = false;
+    openName = name;
+    const entry = chapters.get(name);
+    if (entry?.mounted) { entry.ctx.resize(); entry.mod.resize?.(entry.ctx); }
+    if (scroll) requestAnimationFrame(() => document.getElementById(name).scrollIntoView({ behavior: reduced ? 'auto' : 'smooth', block: 'start' }));
+    updateScene();
+  }
+  function closeChapter() {
+    folded.forEach((n) => { document.getElementById(n).hidden = true; });
+    tiles.forEach((t) => t.setAttribute('aria-pressed', 'false'));
+    closeBtn.hidden = true; openName = null;
+    trio.scrollIntoView({ behavior: reduced ? 'auto' : 'smooth', block: 'start' });
+    updateScene();
+  }
+  tiles.forEach((t) => t.addEventListener('click', () => { audio.plip(1.1); openName === t.dataset.open ? closeChapter() : openChapter(t.dataset.open); }));
+  closeBtn.addEventListener('click', closeChapter);
+  // The menu and the journey ask for a chapter before they travel to it.
+  document.addEventListener('water:open', (e) => { if (folded.includes(e.detail) && openName !== e.detail) openChapter(e.detail, false); });
 }
 
 // The river along the bottom edge grows with the journey.

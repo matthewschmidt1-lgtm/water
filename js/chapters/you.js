@@ -206,14 +206,6 @@ export default {
       c.beginPath(); c.arc(x, y, 1.2 + p * 3, 0, 7); c.fill();
     }
 
-    // The three lines, one per breath phase, fading in and out
-    const a = Math.min(1, lineT / 1.6) * Math.max(0, Math.min(1, (4.6 - lineT) / 1.2));
-    if (a > 0) {
-      c.fillStyle = `rgba(244,249,251,${a * 0.85})`;
-      c.font = `400 ${Math.round(Math.min(34, W * 0.045))}px "Iowan Old Style", "Palatino Linotype", Georgia, serif`;
-      c.textAlign = 'center';
-      c.fillText(LINES[lineI], fx, bottom + 52);
-    }
     drawTaps(c, dt);
   },
 };
