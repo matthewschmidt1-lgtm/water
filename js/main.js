@@ -219,17 +219,48 @@ function checkEntered() {
 addEventListener('scroll', checkEntered, { passive: true });
 checkEntered();
 
-// The cycle: three lines, one thread that curves back to where it began.
+// The ending: a single drop, silence, breath. Then the word.
 const cycle = document.getElementById('cycle');
 if (cycle) {
+  const cv = document.getElementById('cycle-canvas');
+  const cc = cv.getContext('2d');
+  let started = false, t0 = 0, cw = 0, ch = 0, landed = false, rings = [];
+  const sizeCycle = () => { const r = cv.getBoundingClientRect(); cw = Math.round(r.width); ch = Math.round(r.height); cv.width = cw * dpr; cv.height = ch * dpr; cc.setTransform(dpr, 0, 0, dpr, 0, 0); };
+  const frame = (now) => {
+    if (!started) return;
+    const t = (now - t0) / 1000;
+    cc.clearRect(0, 0, cw, ch);
+    const level = ch * 0.68 + (0.5 - breath.value) * 6;
+    // the still water
+    cc.fillStyle = `rgba(47,184,198,${0.22 + breath.value * 0.08})`;
+    cc.beginPath(); cc.moveTo(0, ch);
+    for (let x = 0; x <= cw; x += 6) cc.lineTo(x, level + Math.sin(x * 0.02 + t * 0.6) * 1.2);
+    cc.lineTo(cw, ch); cc.closePath(); cc.fill();
+    cc.strokeStyle = `rgba(127,242,255,${0.25 + breath.value * 0.3})`; cc.lineWidth = 1;
+    cc.beginPath(); for (let x = 0; x <= cw; x += 6) x ? cc.lineTo(x, level + Math.sin(x * 0.02 + t * 0.6) * 1.2) : cc.moveTo(x, level); cc.stroke();
+    // one drop, once
+    if (!landed) {
+      const fall = Math.max(0, t - 2.2);
+      const y = reduced ? level : ch * 0.18 + fall * fall * 260;
+      const a = Math.min(1, t / 1.6);
+      if (y >= level || reduced) { landed = true; rings.push(t); audio.plip(1); }
+      else { cc.globalAlpha = a; cc.fillStyle = '#bff4ff'; cc.beginPath(); cc.ellipse(cw / 2, y, 4, 5.5, 0, 0, Math.PI * 2); cc.fill(); cc.globalAlpha = 1; }
+    }
+    for (let i = rings.length - 1; i >= 0; i--) {
+      const k = (t - rings[i]) / 4; if (k > 1) { rings.splice(i, 1); continue; }
+      cc.strokeStyle = `rgba(127,242,255,${(1 - k) * 0.6})`; cc.beginPath(); cc.ellipse(cw / 2, level, 8 + k * 120, (8 + k * 120) * 0.24, 0, 0, Math.PI * 2); cc.stroke();
+    }
+    requestAnimationFrame(frame);
+  };
+  const off = breath.onPhase((p) => { if (started && landed && p === 'exhale') rings.push((performance.now() - t0) / 1000); });
   new IntersectionObserver((entries) => {
     entries.forEach((en) => {
-      if (!en.isIntersecting || cycle.classList.contains('is-visible')) return;
-      cycle.classList.add('is-visible');
-      const motion = cycle.querySelector('animateMotion');
-      setTimeout(() => { try { motion.beginElement(); } catch (_) {} }, 600);
+      if (!en.isIntersecting || started) return;
+      sizeCycle(); started = true; t0 = performance.now(); cycle.classList.add('is-visible');
+      requestAnimationFrame(frame);
     });
   }, { threshold: 0.5 }).observe(cycle);
+  addEventListener('resize', () => { if (started) sizeCycle(); });
 }
 
 // The river along the bottom edge grows with the journey.

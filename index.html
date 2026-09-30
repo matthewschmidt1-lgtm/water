@@ -47,6 +47,7 @@
 
 
   <main>
+    <section class="chapter" id="one" data-chapter="one" data-group="changes" data-label="One drop"></section>
     <section class="chapter" id="cloud" data-chapter="cloud" data-group="returns" data-label="Sky"></section>
     <section class="chapter" id="rain" data-chapter="rain" data-group="returns" data-label="Rain"></section>
     <section class="chapter" id="mountain" data-chapter="mountain" data-group="connects" data-label="Mountain"></section>
@@ -59,22 +60,12 @@
   </main>
 
   <section id="cycle" aria-label="One water">
-    <p class="cycle-earned">You followed it. It changed. It connected everything. And it returned.</p>
-    <div class="cycle-box">
-      <svg viewBox="0 0 640 400" aria-hidden="true">
-        <!-- one thread: from the end of "changes" down past "connects", on to "returns", then curving back to the beginning -->
-        <path class="thread-glow" d="M 470 76 C 560 110, 560 170, 470 200 C 380 230, 180 230, 170 200 C 150 170, 200 150, 300 165 C 420 185, 520 240, 470 324 C 420 400, 120 400, 90 300 C 60 200, 60 110, 170 76" />
-        <path class="thread" d="M 470 76 C 560 110, 560 170, 470 200 C 380 230, 180 230, 170 200 C 150 170, 200 150, 300 165 C 420 185, 520 240, 470 324 C 420 400, 120 400, 90 300 C 60 200, 60 110, 170 76" />
-        <circle class="drop" r="4">
-          <animateMotion dur="7s" begin="indefinite" fill="freeze" calcMode="spline" keySplines="0.4 0 0.2 1" keyTimes="0;1"
-            path="M 470 76 C 560 110, 560 170, 470 200 C 380 230, 180 230, 170 200 C 150 170, 200 150, 300 165 C 420 185, 520 240, 470 324 C 420 400, 120 400, 90 300 C 60 200, 60 110, 170 76" />
-        </circle>
-      </svg>
-      <p class="line">Water changes.</p>
-      <p class="line">Water connects.</p>
-      <p class="line">Water returns.</p>
-    </div>
+    <div class="cycle-box"><canvas id="cycle-canvas" aria-hidden="true"></canvas></div>
+    <p class="line">Water changes.</p>
+    <p class="line">Water connects.</p>
+    <p class="line">Water returns.</p>
     <p class="cycle-word">WATER</p>
+    <p class="cycle-last">Enjoy it while it lasts.</p>
   </section>
 
   <footer>
