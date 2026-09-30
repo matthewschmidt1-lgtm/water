@@ -182,7 +182,7 @@ export default {
         <div class="depth" data-level="1">
           <p class="l1">LOOK: water goes in at the roots and out at the leaves.</p>
           <div class="l2"><span class="term">Discover</span><p>Leaves have tiny mouths called stomata that let water out as vapor. As each bit leaves, it pulls the next bit up behind it, like a chain being drawn through the tree. A big oak can move hundreds of liters a day.</p></div>
-          <div class="l3"><span class="term">Transpiration</span><p>Cohesion-tension theory: water molecules stick to each other (cohesion) and to the walls of the xylem (adhesion). Evaporation at the leaf creates negative pressure that pulls the whole unbroken column upward from the roots. About 10% of the moisture in the air comes from plants.</p></div>
+          <div class="l3"><span class="term">Transpiration</span><p>Cohesion-tension theory: water molecules stick to each other (cohesion) and to the walls of the xylem (adhesion). Evaporation at the leaf creates negative pressure that pulls the whole unbroken column upward from the roots. About 10% of the moisture in the air comes from plants.</p><p class="source">Source: <a href="https://www.usgs.gov/special-topics/water-science-school/science/evapotranspiration-and-water-cycle" target="_blank" rel="noopener">USGS Water Science School: Evapotranspiration</a></p></div>
           <button class="depth-more">Discover</button>
         </div>
       </div>`);

@@ -107,7 +107,7 @@ export default {
         <div class="depth" data-level="1">
           <p class="l1">LOOK: you are mostly water. Every sip has been a cloud, a river, and maybe a dinosaur's drink.</p>
           <div class="l2"><span class="term">Discover</span><p>Water moves through you all day. It rides in your blood, leaves as sweat, floats out with every breath, and spills as tears. You lose about a litre a day just by breathing and sweating, which is why you get thirsty.</p></div>
-          <div class="l3"><span class="term">Homeostasis</span><p>Your kidneys keep water and salt in balance, filtering the blood and holding on to water when you need it. Osmosis moves water across cell walls toward the saltier side. An adult is about 60% water by mass, the brain and heart about 73%, bones about 30%. The same water has cycled through clouds, rivers, and living things for roughly four billion years.</p></div>
+          <div class="l3"><span class="term">Homeostasis</span><p>Your kidneys keep water and salt in balance, filtering the blood and holding on to water when you need it. Osmosis moves water across cell walls toward the saltier side. An adult is about 60% water by mass, the brain and heart about 73%, bones about 30%. The same water has cycled through clouds, rivers, and living things for roughly four billion years.</p><p class="source">Source: <a href="https://www.usgs.gov/special-topics/water-science-school/science/water-you-water-and-human-body" target="_blank" rel="noopener">USGS Water Science School: Water in you</a></p></div>
           <button class="depth-more">Discover</button>
         </div>
       </div>`);

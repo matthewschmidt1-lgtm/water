@@ -162,6 +162,9 @@ section.chapter {
 .depth[data-level="3"] .l3 { animation: rise 0.9s ease both; }
 .depth .l2 { color: var(--mist); }
 .depth .l3 { color: var(--muted); font-size: 0.95rem; }
+.depth .source { font-size: 0.72rem; letter-spacing: 0.05em; margin: 10px 0 0; color: var(--muted); }
+.depth .source a { color: var(--muted); text-decoration: underline; text-decoration-color: rgba(244, 249, 251, 0.25); text-underline-offset: 2px; transition: color 0.4s, text-decoration-color 0.4s; }
+.depth .source a:hover, .depth .source a:focus-visible { color: var(--accent); text-decoration-color: var(--accent); }
 .depth .term {
   display: inline-block; font-size: 0.72rem; letter-spacing: 0.3em; text-transform: uppercase;
   color: var(--accent); margin: 12px 0 6px; transition: color 1.2s ease;
@@ -278,21 +281,25 @@ body:not(.entered) #drop-nav, body:not(.entered) .top-right, body:not(.entered) 
 .card .where-note { color: var(--muted); margin: 0 0 14px; font-size: 0.95rem; }
 .card .row { display: flex; gap: 8px; justify-content: flex-end; }
 
-/* FOLLOW THE WATER overlay */
-#follow {
-  position: fixed; inset: auto 0 0 0; z-index: 70;
-  background: linear-gradient(to top, rgba(4, 17, 31, 0.96), rgba(4, 17, 31, 0.75) 70%, transparent);
-  padding: 60px 16px 24px;
-  display: grid; place-items: center; text-align: center;
-}
+/* FOLLOW THE WATER: one drop leads the page. No panel, just the drop, a word, and a quiet way out. */
+#follow { position: fixed; inset: 0; z-index: 70; pointer-events: none; transition: opacity 0.6s ease; }
 #follow[hidden] { display: none; }
-#follow .follow-word {
-  font-family: var(--serif); font-size: clamp(2rem, 6vw, 3.4rem); letter-spacing: 0.15em; text-transform: uppercase; margin: 0;
-}
-#follow .follow-word.pop { animation: rise 0.7s ease both; }
-#follow .follow-step { max-width: 52ch; color: var(--mist); font-size: 1.05rem; margin: 10px 0 14px; }
-#follow .follow-count { color: var(--muted); font-size: 0.72rem; letter-spacing: 0.3em; margin-bottom: 10px; }
-#follow .row { display: flex; gap: 8px; }
+#follow.leaving { opacity: 0; }
+#follow-canvas { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
+#follow .follow-label { position: absolute; left: 0; top: 0; width: 0; height: 0; will-change: transform; opacity: 0; transition: opacity 0.35s ease; }
+#follow .follow-label.show { opacity: 1; transition-duration: 0.9s; }
+#follow .follow-label .in { position: absolute; left: 24px; top: -20px; width: max-content; max-width: min(300px, 46vw); text-shadow: 0 1px 3px rgba(4, 17, 31, 0.95), 0 0 20px rgba(4, 17, 31, 0.8); }
+#follow .follow-label.flip .in { left: auto; right: 24px; text-align: right; }
+#follow .follow-word { font-family: var(--serif); font-weight: 400; font-size: clamp(1.3rem, 3.2vw, 2rem); letter-spacing: 0.16em; text-transform: uppercase; margin: 0; color: var(--white); }
+#follow .follow-step { font-size: 0.86rem; line-height: 1.4; color: var(--mist); margin: 6px 0 0; opacity: 0; transition: opacity 1.2s ease; }
+#follow .follow-step.on { opacity: 0.9; }
+#follow .follow-ctl { position: absolute; left: 50%; bottom: calc(16px + env(safe-area-inset-bottom)); transform: translateX(-50%); display: flex; align-items: center; gap: 6px; pointer-events: auto; }
+#follow .follow-ctl .ghost { padding: 6px 12px; font-size: 0.64rem; }
+#follow .follow-next { background: none; border: 0; color: var(--muted); opacity: 0.55; font-size: 0.64rem; letter-spacing: 0.22em; text-transform: uppercase; padding: 8px 10px; cursor: pointer; transition: opacity 0.3s, color 0.6s; }
+#follow .follow-next:hover { opacity: 1; color: var(--accent); }
+#follow .follow-next.again { opacity: 1; color: var(--accent); }
+/* The drop has the stage: the usual buttons step aside while it travels. */
+body.following .bottom-bar { opacity: 0 !important; pointer-events: none !important; }
 
 /* Footer */
 footer {
@@ -331,7 +338,7 @@ body[data-scene="you"]      { --accent: #ffd6a8; --accent-soft: rgba(255, 214, 1
 @media (prefers-reduced-motion: reduce) {
   html { scroll-behavior: auto; }
   .hero-copy, .scroll-cue { transition-duration: 0.2s; transition-delay: 0s; }
-  .depth[data-level] .l1, .depth[data-level] .l2, .depth[data-level] .l3, .card.pop, #follow .follow-word.pop, #drop-nav.open .drop-list, #drop-nav.open::after { animation: none; }
+  .depth[data-level] .l1, .depth[data-level] .l2, .depth[data-level] .l3, .card.pop, #drop-nav.open .drop-list, #drop-nav.open::after { animation: none; }
 }
 /* Phones: the scene is a band across the top (--scene-h, set from js/main.js: 56-62% of the height); the copy flows below on a solid ground. */
 @media (max-width: 820px) {
@@ -401,11 +408,7 @@ body[data-scene="you"]      { --accent: #ffd6a8; --accent-soft: rgba(255, 214, 1
   .card .where-text { font-size: 1.2rem; }
   .card .where-note { font-size: 0.9rem; margin-bottom: 10px; }
   .card .row .btn { margin: 0; }
-  #follow { padding: 36px 16px calc(14px + env(safe-area-inset-bottom)); background: linear-gradient(to top, var(--deep) 0, rgba(4, 17, 31, 0.97) 72%, rgba(4, 17, 31, 0)); }
-  #follow .follow-word { font-size: clamp(1.6rem, 8vw, 2.2rem); }
-  #follow .follow-step { font-size: 0.98rem; margin: 6px 0 10px; }
-  #follow .follow-count { margin-bottom: 4px; }
-  #follow .row .btn { margin: 0; }
+  #follow .follow-ctl .ghost, #follow .follow-next { min-height: 40px; }
   footer { padding-bottom: calc(120px + env(safe-area-inset-bottom)); }
 }
 @media (max-width: 600px) {

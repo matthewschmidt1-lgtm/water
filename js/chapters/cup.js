@@ -198,7 +198,7 @@ export default {
         <div class="depth" data-level="1">
           <p class="l1">LOOK: the water in your cup came from a river, or from under the ground.</p>
           <div class="l2"><span class="term">Discover</span><p>It waited in a reservoir, went through a treatment plant, and traveled in pipes under the street to your tap. After you, it goes down the drain, gets cleaned again, and returns to a river.</p></div>
-          <div class="l3"><span class="term">Municipal water</span><p>Typical treatment: coagulation, sedimentation, filtration, disinfection. The average person in the US uses about 300 liters a day at home. Most of the world's freshwater is locked in ice; less than 1% is easily reachable.</p></div>
+          <div class="l3"><span class="term">Municipal water</span><p>Typical treatment: coagulation, sedimentation, filtration, disinfection. The average person in the US uses about 300 liters a day at home. Most of the world's freshwater is locked in ice; less than 1% is easily reachable.</p><p class="source">Source: <a href="https://www.usgs.gov/special-topics/water-science-school/science/how-much-water-there-earth" target="_blank" rel="noopener">USGS Water Science School: Water on Earth</a></p></div>
           <button class="depth-more">Discover</button>
         </div>
       </div>`);

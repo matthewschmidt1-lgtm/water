@@ -250,7 +250,7 @@ export default {
         <div class="depth" data-level="1">
           <p class="l1">LOOK: some water runs away. Some soaks in. Some goes back to the sky.</p>
           <div class="l2"><span class="term">Discover</span><p>Sandy ground drinks fast because its grains are big, with big gaps between them. Clay grains are tiny and packed tight, so water waits on top and slides away. A paved city is like clay everywhere: more runoff, more floods.</p></div>
-          <div class="l3"><span class="term">Infiltration</span><p>The rate depends on porosity (how much empty space the ground holds) and permeability (how well the spaces connect). Water that gets through recharges groundwater; the top of that saturated zone is the water table. Aquifers supply drinking water for about half the world's people.</p></div>
+          <div class="l3"><span class="term">Infiltration</span><p>The rate depends on porosity (how much empty space the ground holds) and permeability (how well the spaces connect). Water that gets through recharges groundwater; the top of that saturated zone is the water table. Aquifers supply drinking water for about half the world's people.</p><p class="source">Source: <a href="https://www.usgs.gov/special-topics/water-science-school/science/infiltration-and-water-cycle" target="_blank" rel="noopener">USGS Water Science School: Infiltration</a></p></div>
           <button class="depth-more">Discover</button>
         </div>
       </div>`);

@@ -95,12 +95,14 @@
   </div>
 
   <div id="follow" hidden>
-    <div class="follow-count"></div>
-    <p class="follow-word"></p>
-    <p class="follow-step"></p>
-    <div class="row">
+    <canvas id="follow-canvas" aria-hidden="true"></canvas>
+    <div class="follow-label" aria-live="polite"><div class="in">
+      <p class="follow-word"></p>
+      <p class="follow-step"></p>
+    </div></div>
+    <div class="follow-ctl">
       <button class="ghost follow-close">stop</button>
-      <button class="btn follow-next">next ↓</button>
+      <button class="follow-next">next</button>
     </div>
   </div>
 

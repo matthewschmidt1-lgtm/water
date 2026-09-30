@@ -75,7 +75,7 @@ export default {
       <div class="depth" data-level="1">
         <p class="l1">Look: rain falls down. Big drops fall fast. Small drops drift.</p>
         <div class="l2"><span class="term">Discover</span><p>Air pushes back on anything that falls. A big drop is heavy for its size, so it wins against the air and falls faster. Drizzle is so light that a breeze can carry it sideways, which is why rain slants in the wind. And drops are not teardrop shaped. Small ones are perfect spheres. Big ones flatten on the bottom, like a bun, as the air shoves up against them.</p></div>
-        <div class="l3"><span class="term">Terminal velocity</span><p>A falling drop speeds up until air drag equals its weight, then it stops accelerating. That top speed is its terminal velocity: about 9 m/s for a 5 mm drop, and only about 2 m/s for drizzle. Above roughly 5 mm the air pressure on the flattened base wins and the drop tears apart, so there is a natural ceiling on how big a raindrop can be.</p></div>
+        <div class="l3"><span class="term">Terminal velocity</span><p>A falling drop speeds up until air drag equals its weight, then it stops accelerating. That top speed is its terminal velocity: about 9 m/s for a 5 mm drop, and only about 2 m/s for drizzle. Above roughly 5 mm the air pressure on the flattened base wins and the drop tears apart, so there is a natural ceiling on how big a raindrop can be.</p><p class="source">Source: <a href="https://www.usgs.gov/special-topics/water-science-school/science/precipitation-and-water-cycle" target="_blank" rel="noopener">USGS Water Science School: Precipitation</a></p></div>
         <button class="depth-more">Discover</button>
       </div>`;
     el.appendChild(body);

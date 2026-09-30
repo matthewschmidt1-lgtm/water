@@ -143,7 +143,7 @@ export default {
         <div class="depth" data-level="1">
           <p class="l1">LOOK: cold makes ice. Warm makes water. Hot makes steam. And it can go back again.</p>
           <div class="l2"><span class="term">Discover</span><p>Water is odd. Almost everything shrinks when it freezes. Water gets bigger, so ice floats. That is why a lake freezes from the top down, and why the fish underneath survive the winter.</p></div>
-          <div class="l3"><span class="term">Hydrogen bonding</span><p>A water molecule is bent, with a slightly negative oxygen and slightly positive hydrogens. In ice each molecule bonds to four neighbours in an open hexagonal lattice, about 9% less dense than the liquid. In liquid water those bonds break and reform trillions of times a second. That bonding also gives water a high heat capacity, which is why oceans moderate the climate.</p></div>
+          <div class="l3"><span class="term">Hydrogen bonding</span><p>A water molecule is bent, with a slightly negative oxygen and slightly positive hydrogens. In ice each molecule bonds to four neighbours in an open hexagonal lattice, about 9% less dense than the liquid. In liquid water those bonds break and reform trillions of times a second. That bonding also gives water a high heat capacity, which is why oceans moderate the climate.</p><p class="source">Source: <a href="https://www.usgs.gov/special-topics/water-science-school/science/adhesion-and-cohesion-water" target="_blank" rel="noopener">USGS Water Science School: Cohesion</a></p></div>
           <button class="depth-more">Discover</button>
         </div>
         <p class="chapter-kicker" style="margin-top:32px">Impossible water</p>

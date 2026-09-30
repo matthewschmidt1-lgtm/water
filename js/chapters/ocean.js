@@ -62,7 +62,7 @@ export default {
         <div class="depth" data-level="1">
           <p class="l1">LOOK: waves go up and down. The water in a wave does not travel to the shore. The energy does.</p>
           <div class="l2"><span class="term">Discover</span><p>Wind pushes on the sea and piles it into waves. A cork on the water bobs in a small circle as a wave passes, and ends up almost where it started. The slow rise and fall of the tides comes from the moon's pull.</p></div>
-          <div class="l3"><span class="term">Orbital motion</span><p>Water particles under a wave move in circles that shrink with depth. In deep water a wave's speed depends on its wavelength: longer waves travel faster. The ocean holds about 97% of Earth's water and has absorbed most of the extra heat from a warming climate.</p></div>
+          <div class="l3"><span class="term">Orbital motion</span><p>Water particles under a wave move in circles that shrink with depth. In deep water a wave's speed depends on its wavelength: longer waves travel faster. The ocean holds about 97% of Earth's water and has absorbed most of the extra heat from a warming climate.</p><p class="source">Source: <a href="https://oceanservice.noaa.gov/facts/oceanwater.html" target="_blank" rel="noopener">NOAA National Ocean Service</a></p></div>
           <button class="depth-more">Discover</button>
         </div>
       </div>`);
