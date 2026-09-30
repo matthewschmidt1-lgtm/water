@@ -1,0 +1,46 @@
+// Shared text for the global mechanics. Chapters own their own text.
+
+export const WHERE = [
+  { text: 'Water is inside a cloud above the Pacific.', note: 'A big cumulus cloud can weigh more than a hundred elephants. It floats because it is spread out over a huge space.' },
+  { text: 'Water is frozen inside a glacier in Greenland.', note: 'Some of that ice fell as snow before the pyramids were built.' },
+  { text: 'Water is moving through the soil beneath a forest.', note: 'It creeps between grains of sand and clay, sometimes only a few centimeters a day.' },
+  { text: 'Water is inside a blueberry.', note: 'A blueberry is about 85% water. So are you, roughly, when you were born.' },
+  { text: 'Water is moving through your body right now.', note: 'Your blood is mostly water. It carries oxygen, food, and messages.' },
+  { text: 'Water is falling from the sky in Japan.', note: 'Somewhere on Earth it is always raining.' },
+  { text: 'Water is rising as vapor off a hot road after a storm.', note: 'That shimmer is evaporation you can actually see.' },
+  { text: 'Water is climbing the trunk of a redwood tree.', note: 'It rises over a hundred meters without a pump. Ask the tree chapter how.' },
+  { text: 'Water is locked in permafrost in Siberia.', note: 'Ground that has stayed frozen for thousands of years.' },
+  { text: 'Water is sitting in a puddle a dog is about to drink.', note: 'Good dog.' },
+  { text: 'Water is three kilometers down, in the dark, near a hydrothermal vent.', note: 'Hot enough to cook, but the pressure keeps it liquid.' },
+  { text: 'Water is in the steam above a cup of tea in Nairobi.', note: 'It will be back in a cloud by tonight.' },
+  { text: 'Water is inside a comet, far past Neptune.', note: 'Some of Earth\'s water may have arrived that way.' },
+  { text: 'Water is hiding in the walls of a canyon, slowly widening a crack.', note: 'Freeze, expand, thaw, repeat. This is how water breaks rock.' },
+  { text: 'Water is in the mist of a waterfall, catching a rainbow.', note: 'Every droplet is a tiny prism.' },
+  { text: 'Water is in a reservoir, waiting to become someone\'s morning shower.', note: 'From here it goes to a treatment plant, then through pipes under the street.' },
+  { text: 'Water is in the sap of a maple tree, moving up as spring arrives.', note: 'Tap it and you get syrup.' },
+  { text: 'Water is inside an ancient aquifer under the Sahara.', note: 'It fell as rain when the desert was green, ten thousand years ago.' },
+  { text: 'Water is in your breath.', note: 'Exhale onto a cold window. That fog is you.' },
+  { text: 'Water is in the ocean, one wave from the shore.', note: 'The water in a wave barely moves forward. The energy does.' },
+];
+
+// One tiny piece of water, one enormous loop. `chapter` scrolls the page to that section.
+export const FOLLOW = [
+  { word: 'Snowflake', text: 'It lands on a mountain. It waits all winter.', chapter: 'mountain' },
+  { word: 'Melt', text: 'Spring sun. The snowflake becomes a drop and slides.', chapter: 'mountain' },
+  { word: 'Stream', text: 'Thousands of drops find each other in a crease in the rock.', chapter: 'mountain' },
+  { word: 'River', text: 'Streams merge. The river carries the drop downhill, and a little bit of the mountain with it.', chapter: 'mountain' },
+  { word: 'Reservoir', text: 'A dam holds it. The drop rests here for months.', chapter: 'cup' },
+  { word: 'Treatment', text: 'Filters, then a little chlorine, so it is safe to drink.', chapter: 'cup' },
+  { word: 'Faucet', text: 'Pipes under the street, up through the wall, and out.', chapter: 'cup' },
+  { word: 'Glass', text: 'The drop is in your cup.', chapter: 'cup' },
+  { word: 'You', text: 'You drink it. It joins your blood. It travels to your brain, your fingers, your knees.', chapter: 'you' },
+  { word: 'Drain', text: 'Shower, sink, street drain. Down it goes.', chapter: 'soil' },
+  { word: 'Soil', text: 'Some soaks into the ground and creeps between grains of sand.', chapter: 'soil' },
+  { word: 'Root', text: 'A root finds it. Pulls it in.', chapter: 'tree' },
+  { word: 'Leaf', text: 'Up the trunk, out through a leaf, into the air. Transpiration.', chapter: 'tree' },
+  { word: 'Ocean', text: 'The rest reaches a river, then the sea, and drifts for years.', chapter: 'ocean' },
+  { word: 'Evaporation', text: 'Sun warms the surface. The drop lifts off, invisible.', chapter: 'ocean' },
+  { word: 'Cloud', text: 'High up it cools and clings to a speck of dust with a billion others.', chapter: 'cloud' },
+  { word: 'Rain', text: 'Heavy enough now. It falls.', chapter: 'rain' },
+  { word: 'Again', text: 'Onto a mountain. And again. And again. For four billion years.', chapter: 'mountain' },
+];
