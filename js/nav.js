@@ -3,13 +3,7 @@ export function mountNav(items) {
   const root = document.getElementById('drop-nav');
   const btn = root.querySelector('.drop');
   const list = root.querySelector('.drop-list');
-  // Three ideas hold everything: water changes, water connects, water returns.
-  const GROUPS = [['changes', 'Water changes'], ['connects', 'Water connects'], ['returns', 'Water returns']];
-  list.innerHTML = GROUPS.map(([key, title]) => {
-    const rows = items.filter((it) => it.group === key);
-    if (!rows.length) return '';
-    return `<li class="drop-group">${title}</li>` + rows.map((it) => `<li><a href="#${it.name}" data-name="${it.name}">${it.label}</a></li>`).join('');
-  }).join('');
+  list.innerHTML = items.map((it) => `<li><a href="#${it.name}" data-name="${it.name}">${it.label}</a></li>`).join('');
   btn.addEventListener('click', () => {
     const open = root.classList.toggle('open');
     btn.setAttribute('aria-expanded', String(open));
