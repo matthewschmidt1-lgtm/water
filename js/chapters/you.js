@@ -1,4 +1,4 @@
-// 09 — You. A figure mostly made of water. It fills on the inhale, breathes out mist
+// You. A figure mostly made of water. It fills on the inhale, breathes out mist
 // on the exhale, and the site's three lines arrive one per breath.
 
 const N_IN = 70, N_OUT = 40;
@@ -95,7 +95,7 @@ export default {
     el.appendChild(style);
     el.insertAdjacentHTML('beforeend', `
       <div class="chapter-body left">
-        <p class="chapter-kicker">09 — You</p>
+        <p class="chapter-kicker">You</p>
         <h2>The water in you has been everywhere.</h2>
         <p class="lede">You are mostly water. It comes in, it goes out, and it never really stops.</p>
         <div class="controls">

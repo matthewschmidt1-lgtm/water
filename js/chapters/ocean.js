@@ -1,4 +1,4 @@
-// 07 — Ocean. An infinite procedural sea under a low moon. Waves are summed sines;
+// Ocean. An infinite procedural sea under a low moon. Waves are summed sines;
 // the whole sea pulls back on the inhale and rolls forward on the exhale.
 
 const BANDS = 5;
@@ -52,7 +52,7 @@ export default {
 
     el.insertAdjacentHTML('beforeend', `
       <div class="chapter-body left">
-        <p class="chapter-kicker">07 — Ocean</p>
+        <p class="chapter-kicker">Ocean</p>
         <h2>The wave moves. The water mostly stays.</h2>
         <p class="lede">Watch the sea breathe. Tap it to drop a stone.</p>
         <div class="controls">

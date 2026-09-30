@@ -1,4 +1,4 @@
-// 06 — Cup. A glass fills. You drink. Then the camera pulls back: kitchen, house,
+// Cup. A glass fills. You drink. Then the camera pulls back: kitchen, house,
 // neighborhood, watershed, continent, Earth. One scale per stage; units = glass heights.
 
 const STAGES = ['cup', 'kitchen', 'house', 'neighborhood', 'watershed', 'continent', 'Earth'];
@@ -186,7 +186,7 @@ export default {
         #cup .btn:disabled, #cup .ghost:disabled { opacity: 0.4; cursor: default; }
       </style>
       <div class="chapter-body right">
-        <p class="chapter-kicker">06 — Cup</p>
+        <p class="chapter-kicker">Cup</p>
         <h2>The water in your glass belongs to a bigger story.</h2>
         <p class="lede">Have a drink. Then step back, and back, and back.</p>
         <div class="controls">

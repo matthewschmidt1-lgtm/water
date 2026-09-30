@@ -1,0 +1,41 @@
+/* WHERE IS WATER? — the hunt and the living window. One full-screen overlay. */
+.where {
+  position: fixed; inset: 0; z-index: 80;
+  background: rgba(3, 11, 21, 0.94);
+  opacity: 0; transition: opacity 1s ease;
+  pointer-events: none;
+}
+.where[hidden] { display: none; }
+.where.on { opacity: 1; }
+.where-canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+.where-tag {
+  position: absolute; margin: 0; opacity: 0; transition: opacity 0.9s ease;
+  font-family: var(--serif); pointer-events: none; line-height: 1.25;
+}
+.where-tag.on { opacity: 1; }
+.where-tag b { display: block; font-weight: 400; font-size: clamp(1.4rem, 3.6vw, 2rem); color: var(--ink); }
+.where-tag i { display: block; font-size: clamp(1.1rem, 2.4vw, 1.3rem); color: var(--muted); margin-top: 2px; }
+.where-tag.left { text-align: right; }
+.where-title, .where-big {
+  position: absolute; left: 0; right: 0; margin: 0; text-align: center; pointer-events: none;
+  font-family: var(--serif); font-weight: 400; color: var(--ink);
+  padding: 0 max(20px, env(safe-area-inset-right)) 0 max(20px, env(safe-area-inset-left));
+  opacity: 0; transition: opacity 0.7s ease; text-wrap: balance;
+}
+.where-title { top: calc(11vh + env(safe-area-inset-top)); font-size: clamp(1.25rem, 3.4vw, 1.9rem); line-height: 1.3; }
+.where-big { top: 44%; transform: translateY(-50%); font-size: clamp(2rem, 6.5vw, 4rem); letter-spacing: 0.02em; transition-duration: 1.4s; text-shadow: 0 0 30px rgba(3, 11, 21, 0.9); }
+.where-title.on, .where-big.on { opacity: 1; }
+.where-ctl {
+  position: absolute; left: 0; right: 0; display: flex; gap: 10px; justify-content: center; align-items: center;
+  bottom: calc(22px + env(safe-area-inset-bottom));
+}
+.where-ctl button { pointer-events: auto; min-height: 44px; min-width: 44px; }
+.where-ctl .where-next { opacity: 0; transition: opacity 1.2s ease; }
+.where-ctl .where-next.on { opacity: 1; }
+.where-ctl .where-next[hidden] { display: none; }
+body.where-open .bottom-bar, body.where-open #river { opacity: 0 !important; pointer-events: none !important; }
+@media (max-width: 820px) {
+  .where-ctl { bottom: calc(18px + env(safe-area-inset-bottom)); }
+  .where-tag b { font-size: 1.35rem; }
+  .where-tag i { font-size: 1.1rem; }
+}

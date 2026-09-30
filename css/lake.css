@@ -1,0 +1,2 @@
+/* The living lake: hero overrides live here. Scoped under .hero so they win over css/water.css. */
+.hero .hero-canvas { touch-action: pan-y; }

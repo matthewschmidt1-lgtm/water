@@ -89,25 +89,21 @@
     <button id="follow-btn" class="btn">Follow the water</button>
   </div>
 
-  <div id="where-card" class="card" hidden>
-    <p class="kicker">Right now</p>
-    <p class="where-text"></p>
-    <p class="where-note"></p>
-    <div class="row">
-      <button class="ghost where-close">close</button>
-      <button class="btn where-next">next</button>
-    </div>
-  </div>
+  <div id="where-card" class="where" role="dialog" aria-label="Where is water?" hidden></div>
 
   <div id="follow" hidden>
     <canvas id="follow-canvas" aria-hidden="true"></canvas>
     <div class="follow-label" aria-live="polite"><div class="in">
       <p class="follow-word"></p>
+      <p class="follow-term"></p>
       <p class="follow-step"></p>
+      <p class="follow-line"></p>
     </div></div>
+    <div class="follow-choices" role="group" aria-label="Which way?"></div>
     <div class="follow-ctl">
       <button class="ghost follow-close">stop</button>
       <button class="follow-next">next</button>
+      <button class="follow-again" hidden>Follow it again</button>
     </div>
   </div>
 

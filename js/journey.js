@@ -15,12 +15,18 @@ export function mountJourney({ narrow, reduced, getSceneH }) {
   const followStep = follow.querySelector('.follow-step');
   const followWord = follow.querySelector('.follow-word');
   const followNext = follow.querySelector('.follow-next');
-  const LAST = FOLLOW.length - 1;
-  const GLIDE = 1900, STEP_MS = 5200, SENTENCE_MS = 3000;
+  const followTerm = follow.querySelector('.follow-term');
+  const followLine = follow.querySelector('.follow-line');
+  const choicesEl = follow.querySelector('.follow-choices');
+  const againBtn = follow.querySelector('.follow-again');
+  const cycleEl = document.getElementById('cycle');
+  const MAP = Object.fromEntries(FOLLOW.map((n) => [n.id, n]));
+  const END = { id: '_end', word: '', text: '', chapter: 'cycle', form: 'drop', finale: true };
+  const GLIDE = 1900, STEP_MS = 3500, DISCOVER_STEP_MS = 5600, SENTENCE_MS = 3000, CONSEQUENCE_MS = 2500, DISCOVER_MS = 3500, FINALE_MS = 9000, END_HOLD_MS = 6500;
   const ease = (p) => (p < 0.5 ? 4 * p * p * p : 1 - Math.pow(-2 * p + 2, 3) / 2);
   const F = {
     on: false, i: 0, x: 0, y: 0, sx: 0, sy: 0, tx: 0, ty: 0, t0: 0, arrived: false, sentenceOn: false,
-    scrollFrom: 0, bend: 1, ring: -1, color: '#7ff2ff', origin: null, raf: 0, timer: null, labelT: null, fade: 1,
+    scrollFrom: 0, bend: 1, node: null, resting: false, flip: false, choosing: false, form: 'drop', count: 0, disc: null, ring: -1, color: '#7ff2ff', origin: null, raf: 0, timer: null, labelT: null, fade: 1,
   };
   const trail = []; let trailAt = 0;
 
@@ -48,36 +54,101 @@ export function mountJourney({ narrow, reduced, getSceneH }) {
     return [w * fx, areaH * (0.35 + Math.cos(i * 1.7) * 0.08)];
   }
 
-  function startStep(i) {
-    F.i = Math.min(i, LAST);
-    const s = FOLLOW[F.i];
+  // The end of the thread inside #cycle (the svg's viewBox is 640x400; the thread ends at 170,76).
+  function cycleTarget() {
+    const box = cycleEl.querySelector('.cycle-box').getBoundingClientRect();
+    const dest = followScrollFor(cycleEl);
+    return [box.left + box.width * (170 / 640), box.top + scrollY - dest + box.height * (76 / 400)];
+  }
+
+  const clearTimers = () => { clearTimeout(F.timer); clearTimeout(F.labelT); clearTimeout(F.t2); clearTimeout(F.t3); F.timer = F.t2 = F.t3 = null; };
+  function hideChoices() { choicesEl.classList.remove('vis'); F.choosing = false; setTimeout(() => { if (!F.choosing) choicesEl.classList.remove('show'); }, 700); }
+
+  function startStep(id) {
+    const s = id === '_end' ? END : MAP[id] || FOLLOW[0];
+    F.node = s; F.form = s.form || 'drop'; F.count++;
     const el = document.getElementById(s.chapter);
+    clearTimers(); hideChoices();
+    followTerm.classList.remove('on'); followLine.classList.remove('on', 'cons');
     F.color = getComputedStyle(document.body).getPropertyValue('--accent').trim() || '#7ff2ff';
     F.sx = F.x; F.sy = F.y; F.scrollFrom = scrollY; F.t0 = performance.now();
     F.arrived = false; F.sentenceOn = false; F.el = el; F.bend = -F.bend;
     // The loop closes where it began: the last step returns to the first step's point.
-    if (F.i === LAST && F.origin) [F.tx, F.ty] = F.origin;
-    else { [F.tx, F.ty] = followTarget(F.i, el); if (F.i === 0) F.origin = [F.tx, F.ty]; }
+    if (s.finale) [F.tx, F.ty] = cycleTarget();
+    else { [F.tx, F.ty] = followTarget(F.count, el); }
     followStep.classList.remove('on');
     fLabel.classList.remove('show');
-    clearTimeout(F.labelT);
-    F.labelT = setTimeout(() => {
-      followWord.textContent = s.word;
-      followStep.textContent = s.text;
-      fLabel.classList.toggle('flip', F.tx > innerWidth * 0.55);
-      fLabel.classList.add('show');
-    }, reduced ? 0 : 260);
-    const done = F.i >= LAST;
-    followNext.textContent = done ? 'Begin again' : 'next';
-    followNext.classList.toggle('again', done);
-    clearTimeout(F.timer);
-    F.timer = done ? null : setTimeout(() => startStep(F.i + 1), STEP_MS);
+    if (!s.finale) {
+      F.labelT = setTimeout(() => {
+        followWord.textContent = s.word;
+        followStep.textContent = s.text;
+        F.flip = F.tx > innerWidth * 0.55;
+        fLabel.classList.toggle('flip', F.flip);
+        choicesEl.classList.toggle('flip', F.flip);
+        fLabel.classList.add('show');
+      }, reduced ? 0 : 260);
+    }
+    followNext.hidden = !!(s.choices || s.finale);
+    const last = !s.next && !s.choices && !s.finale;
+    followNext.textContent = last ? 'finish' : 'next';
+    // Steps go on by themselves, except at a fork (the visitor decides) and at the end (the finale takes over).
     if (reduced) { F.x = F.tx; F.y = F.ty; window.scrollTo({ top: followScrollFor(el), behavior: 'instant' }); arrive(); }
   }
 
   function arrive() {
+    const s = F.node;
     F.arrived = true; F.arrivedAt = performance.now(); F.ring = F.arrivedAt;
-    audio.plip(1 + F.i * 0.05);
+    audio.plip(1 + (F.count % 12) * 0.05);
+    if (s.finale) { finish(); return; }
+    if (s.discover) {
+      F.t2 = setTimeout(() => {
+        followTerm.textContent = s.discover.term; followLine.textContent = s.discover.line;
+        followTerm.classList.add('on'); followLine.classList.add('on');
+        F.t3 = setTimeout(() => { followTerm.classList.remove('on'); followLine.classList.remove('on'); }, DISCOVER_MS);
+      }, reduced ? 200 : 900);
+    }
+    if (s.choices) showChoices(s);
+    else if (s.next) F.timer = setTimeout(() => startStep(s.next), s.discover ? DISCOVER_STEP_MS : STEP_MS);
+    else if (!s.next) F.timer = setTimeout(() => startStep('_end'), END_HOLD_MS);
+  }
+
+  function showChoices(s) {
+    choicesEl.textContent = '';
+    s.choices.forEach((c) => {
+      const b = document.createElement('button');
+      b.type = 'button'; b.textContent = c.label;
+      b.addEventListener('click', () => choose(c));
+      choicesEl.appendChild(b);
+    });
+    F.choosing = true;
+    clearTimeout(F.t2); F.t2 = setTimeout(() => {
+      if (!F.choosing) return;
+      choicesEl.classList.add('show'); void choicesEl.offsetWidth; choicesEl.classList.add('vis');
+      choicesEl.querySelector('button')?.focus({ preventScroll: true });
+    }, reduced ? 100 : 1500);
+  }
+  function choose(c) {
+    if (!F.choosing) return;
+    F.choosing = false; audio.plip(1.3);
+    choicesEl.classList.remove('vis'); setTimeout(() => choicesEl.classList.remove('show'), 500);
+    followStep.classList.remove('on');
+    const go = () => startStep(c.next);
+    if (c.consequence) {
+      followLine.textContent = c.consequence; followLine.classList.add('cons', 'on');
+      F.timer = setTimeout(go, CONSEQUENCE_MS);
+    } else go();
+  }
+
+  // The journey completes: the drop rests at the end of the thread, the finale plays, then the overlay fades away.
+  function finish() {
+    follow.classList.add('finale');
+    cycleEl.classList.add('is-visible');
+    F.t2 = setTimeout(() => { try { cycleEl.querySelector('animateMotion').beginElement(); } catch (_) {} }, 600);
+    F.timer = setTimeout(() => {
+      F.resting = true; cancelAnimationFrame(F.raf); fc.clearRect(0, 0, innerWidth, innerHeight);
+      document.body.classList.remove('following');
+      follow.classList.add('resting'); againBtn.hidden = false;
+    }, FINALE_MS);
   }
 
   function followFrame(now) {
@@ -104,6 +175,15 @@ export function mountJourney({ narrow, reduced, getSceneH }) {
     const bob = F.arrived && !reduced ? Math.sin(now / 900) * 2.5 : 0;
     const dy0 = F.y + bob;
     fLabel.style.transform = `translate3d(${F.x.toFixed(1)}px,${dy0.toFixed(1)}px,0)`;
+    if (F.choosing) {
+      if (narrow.matches) {
+        const h = choicesEl.offsetHeight || 150;
+        const y = Math.min(Math.max(getSceneH() + 8, F.y + 60), H - 84 - h);
+        choicesEl.style.transform = `translate3d(${W / 2}px,${y.toFixed(1)}px,0) translateX(-50%)`;
+      } else {
+        choicesEl.style.transform = `translate3d(${(F.x + (F.flip ? -24 : 24)).toFixed(1)}px,${(F.y + 100).toFixed(1)}px,0)${F.flip ? ' translateX(-100%)' : ''}`;
+      }
+    }
     // trail of tiny drops
     fc.fillStyle = F.color;
     for (let k = trail.length - 1; k >= 0; k--) {
@@ -120,39 +200,73 @@ export function mountJourney({ narrow, reduced, getSceneH }) {
         fc.beginPath(); fc.arc(F.x, dy0, 8 + (1 - Math.pow(1 - rp, 3)) * 78, 0, 6.2832); fc.stroke();
       }
     }
-    // the drop: layered glow, bright core
-    const r = 6 + bv * 1.5;
+    drawDrop(F.x, dy0, 6 + bv * 1.5, F.form, now);
+  }
+
+  // Five tiny variants: the drop looks like what you are.
+  function poly(x, y, r, n, rot) {
+    fc.beginPath();
+    for (let k = 0; k < n; k++) { const a = rot + (k / n) * 6.2832; fc[k ? 'lineTo' : 'moveTo'](x + Math.cos(a) * r, y + Math.sin(a) * r); }
+    fc.closePath();
+  }
+  function drawDrop(x, y, r, form, now) {
+    const f = F.fade, fast = F.arrived ? 1 : 1.35;
     fc.fillStyle = F.color;
-    fc.globalAlpha = 0.07 * F.fade; fc.beginPath(); fc.arc(F.x, dy0, r * 4.2, 0, 6.2832); fc.fill();
-    fc.globalAlpha = 0.14 * F.fade; fc.beginPath(); fc.arc(F.x, dy0, r * 2.6, 0, 6.2832); fc.fill();
-    fc.globalAlpha = 0.35 * F.fade; fc.beginPath(); fc.arc(F.x, dy0, r * 1.6, 0, 6.2832); fc.fill();
-    fc.globalAlpha = F.fade; fc.fillStyle = '#f4f9fb';
-    fc.beginPath(); fc.ellipse(F.x, dy0, r * 0.62, r * 0.78, 0, 0, 6.2832); fc.fill();
+    const halo = (k, a) => { fc.globalAlpha = Math.min(1, a * f * fast); fc.beginPath(); fc.arc(x, y, r * k, 0, 6.2832); fc.fill(); };
+    if (form === 'rain') {
+      const g = fc.createLinearGradient(x, y - r * 7, x, y + r);
+      g.addColorStop(0, 'rgba(244,249,251,0)'); g.addColorStop(1, '#f4f9fb');
+      fc.globalAlpha = 0.5 * f; fc.fillStyle = g; fc.fillRect(x - 1.1, y - r * 7, 2.2, r * 8);
+      halo(2.4, 0.12); fc.globalAlpha = f; fc.fillStyle = '#f4f9fb';
+      fc.beginPath(); fc.ellipse(x, y, r * 0.42, r * 1.05, 0, 0, 6.2832); fc.fill();
+    } else if (form === 'snow') {
+      const rot = now / 4000; halo(4, 0.07); halo(2.4, 0.13);
+      fc.globalAlpha = 0.9 * f; fc.fillStyle = '#f4f9fb'; poly(x, y, r * 1.15, 6, rot); fc.fill();
+      fc.globalAlpha = 0.35 * f; fc.strokeStyle = '#f4f9fb'; fc.lineWidth = 1; poly(x, y, r * 1.9, 6, rot + 0.5); fc.stroke();
+    } else if (form === 'vapor') {
+      fc.fillStyle = '#e6f6fb';
+      for (let k = 0; k < 8; k++) {
+        const a = k * 2.4 + now / (1500 + k * 170), d = r * (0.5 + (k % 3) * 0.55);
+        fc.globalAlpha = 0.16 * f; fc.beginPath(); fc.arc(x + Math.cos(a) * d, y + Math.sin(a * 1.3) * d, r * (0.9 + (k % 4) * 0.35), 0, 6.2832); fc.fill();
+      }
+      halo(3.4, 0.05);
+    } else if (form === 'ice') {
+      halo(3, 0.08); fc.globalAlpha = 0.85 * f; fc.fillStyle = '#dff7ff'; poly(x, y, r * 1.05, 4, Math.PI / 4); fc.fill();
+      fc.globalAlpha = f; fc.strokeStyle = '#ffffff'; fc.lineWidth = 1.2; poly(x, y, r * 1.4, 4, Math.PI / 4); fc.stroke();
+    } else {
+      halo(4.2, 0.07); halo(2.6, 0.14); halo(1.6, 0.35);
+      fc.globalAlpha = f; fc.fillStyle = '#f4f9fb'; fc.beginPath(); fc.ellipse(x, y, r * 0.62, r * 0.78, 0, 0, 6.2832); fc.fill();
+    }
     fc.globalAlpha = 1;
   }
 
   function stopFollow() {
     if (!F.on) return;
-    F.on = false; cancelAnimationFrame(F.raf);
-    clearTimeout(F.timer); clearTimeout(F.labelT); F.timer = null;
+    F.on = false; cancelAnimationFrame(F.raf); clearTimers(); hideChoices();
     follow.classList.add('leaving'); document.body.classList.remove('following');
-    setTimeout(() => { if (!F.on) { follow.hidden = true; follow.classList.remove('leaving'); fc.clearRect(0, 0, innerWidth, innerHeight); } }, 650);
+    setTimeout(() => { if (!F.on) { follow.hidden = true; follow.classList.remove('leaving', 'finale', 'resting'); againBtn.hidden = true; fc.clearRect(0, 0, innerWidth, innerHeight); } }, 650);
   }
-  function beginFollow() {
+  function beginFollow(from) {
     if (F.on) return;
-    F.on = true; follow.classList.remove('leaving'); follow.hidden = false;
+    F.on = true; F.resting = false; F.count = 0; follow.classList.remove('leaving', 'finale', 'resting'); againBtn.hidden = true; follow.hidden = false;
     document.body.classList.add('following');
     sizeFollowCanvas(); trail.length = 0; F.ring = -1; F.origin = null; F.el = null;
-    const b = followBtn.getBoundingClientRect();
+    const b = from || followBtn.getBoundingClientRect();
     F.x = b.left + b.width / 2; F.y = Math.min(b.top + b.height / 2, innerHeight - 30);
     fLabel.classList.remove('show'); followStep.classList.remove('on');
     F.raf = requestAnimationFrame(followFrame);
-    startStep(0);
+    startStep(FOLLOW[0].id);
   }
-  followBtn.addEventListener('click', beginFollow);
+  followBtn.addEventListener('click', () => beginFollow());
   followNext.addEventListener('click', () => {
-    if (F.i >= LAST) { F.origin = null; startStep(0); } else startStep(F.i + 1);
+    const s = F.node;
+    if (!s || s.choices || s.finale) return;
+    startStep(s.next || '_end');
+  });
+  againBtn.addEventListener('click', () => {
+    const b = againBtn.getBoundingClientRect();
+    F.on = false; beginFollow(b);
   });
   follow.querySelector('.follow-close').addEventListener('click', stopFollow);
-  addEventListener('keydown', (e) => { if (e.key === 'Escape') stopFollow(); });
+  addEventListener('keydown', (e) => { if (e.key === 'Escape' && !F.resting) stopFollow(); });
 }

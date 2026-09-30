@@ -1,4 +1,4 @@
-// 01 — Sky. A stylized cloud drifts across a dawn sky.
+// Sky. A stylized cloud drifts across a dawn sky.
 // Inhale gathers it; exhale loosens it and lets a few drops go. Touch it and a drop speaks.
 
 const LINES = [
@@ -154,7 +154,7 @@ export default {
     const body = document.createElement('div');
     body.className = 'chapter-body left';
     body.innerHTML = `
-      <p class="chapter-kicker">01 — Sky</p>
+      <p class="chapter-kicker">Sky</p>
       <h2>Every drop has been somewhere.</h2>
       <p class="lede">A cloud is a crowd of tiny drops, floating together. Touch it, and one will tell you where it has been.</p>
       <p class="hint">Touch the cloud</p>

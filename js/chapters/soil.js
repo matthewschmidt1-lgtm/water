@@ -1,4 +1,4 @@
-// 04 — Soil. A cutaway of the ground. Paint rain with your finger and watch it
+// Soil. A cutaway of the ground. Paint rain with your finger and watch it
 // run off, soak in, or go back to the sky. The aquifer fills as a water table.
 
 const MAX = 250;
@@ -232,7 +232,7 @@ export default {
         #soil .paint-hint { font-size: 0.8rem; color: var(--muted); font-style: italic; }
       </style>
       <div class="chapter-body right">
-        <p class="chapter-kicker">04 — Soil</p>
+        <p class="chapter-kicker">Soil</p>
         <h2>Where does the rain go?</h2>
         <p class="lede">Press and hold on the sky to make it rain. Then watch the ground decide.</p>
         <div class="chip-row" role="group" aria-label="Ground type">

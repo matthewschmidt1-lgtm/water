@@ -23,24 +23,63 @@ export const WHERE = [
   { text: 'Water is in the ocean, one wave from the shore.', note: 'The water in a wave barely moves forward. The energy does.' },
 ];
 
-// One tiny piece of water, one enormous loop. `chapter` scrolls the page to that section.
+// FOLLOW THE WATER is a graph. You are the water. `chapter` scrolls the page to that section; `form` is how the drop looks.
+// A node with `next` goes on by itself; a node with `choices` waits for the visitor; a node with neither is the end (the finale).
+// `discover` names the idea only after the visitor has lived it.
 export const FOLLOW = [
-  { word: 'Snowflake', text: 'It lands on a mountain. It waits all winter.', chapter: 'mountain' },
-  { word: 'Melt', text: 'Spring sun. The snowflake becomes a drop and slides.', chapter: 'mountain' },
-  { word: 'Stream', text: 'Thousands of drops find each other in a crease in the rock.', chapter: 'mountain' },
-  { word: 'River', text: 'Streams merge. The river carries the drop downhill, and a little mountain with it.', chapter: 'mountain' },
-  { word: 'Reservoir', text: 'A dam holds it. The drop rests here for months.', chapter: 'cup' },
-  { word: 'Treatment', text: 'Filters, then a little chlorine, so it is safe to drink.', chapter: 'cup' },
-  { word: 'Faucet', text: 'Pipes under the street, up through the wall, and out.', chapter: 'cup' },
-  { word: 'Glass', text: 'The drop is in your cup.', chapter: 'cup' },
-  { word: 'You', text: 'You drink it. It joins your blood, and travels to your brain, your fingers, your knees.', chapter: 'you' },
-  { word: 'Drain', text: 'Shower, sink, street drain. Down it goes.', chapter: 'soil' },
-  { word: 'Soil', text: 'Some soaks into the ground and creeps between grains of sand.', chapter: 'soil' },
-  { word: 'Root', text: 'A root finds it. Pulls it in.', chapter: 'tree' },
-  { word: 'Leaf', text: 'Up the trunk, out through a leaf, into the air. Transpiration.', chapter: 'tree' },
-  { word: 'Ocean', text: 'The rest reaches a river, then the sea, and drifts for years.', chapter: 'ocean' },
-  { word: 'Evaporation', text: 'Sun warms the surface. The drop lifts off, invisible.', chapter: 'ocean' },
-  { word: 'Cloud', text: 'High up it cools and clings to a speck of dust with a billion others.', chapter: 'cloud' },
-  { word: 'Rain', text: 'Heavy enough now. It falls.', chapter: 'rain' },
-  { word: 'Again', text: 'Onto a mountain. And again. And again. For four billion years.', chapter: 'mountain' },
+  { id: 'snow', word: 'Snow', text: 'You are a snowflake. You fall. You land on the peak.', chapter: 'mountain', form: 'snow', next: 'melt' },
+  { id: 'melt', word: 'Melt', text: 'Spring sun. You melt.', chapter: 'mountain', form: 'drop', next: 'slide' },
+  { id: 'slide', word: 'Slide', text: 'You slide down the mountain, faster than you thought.', chapter: 'mountain', form: 'drop', next: 'stream' },
+  { id: 'stream', word: 'Stream', text: 'You find other drops. You join a stream. You accelerate.', chapter: 'mountain', form: 'drop', next: 'split' },
+  { id: 'split', word: 'Rock', text: 'You hit a rock. You split. One part goes left. One part goes right.', chapter: 'mountain', form: 'drop',
+    choices: [
+      { label: 'Follow the left', next: 'pond', consequence: 'You slow. The water gathers around you.' },
+      { label: 'Follow the right', next: 'river', consequence: 'You speed up. The slope is steep.' },
+    ] },
+  // left: the pond that waits, then the reservoir and the tap
+  { id: 'pond', word: 'Pond', text: 'A pond that waits. You rest, and the sky rests on you.', chapter: 'mountain', form: 'drop', next: 'reservoir' },
+  { id: 'reservoir', word: 'Reservoir', text: 'A dam holds you for months. Then filters, a little chlorine, and pipes under the street.', chapter: 'cup', form: 'drop', next: 'glass' },
+  { id: 'glass', word: 'Glass', text: 'You come out of a faucet. You are in a cup.', chapter: 'cup', form: 'drop',
+    choices: [
+      { label: 'Be drunk', next: 'you', consequence: 'A hand lifts the cup.' },
+      { label: 'Let it run', next: 'drain', consequence: 'The cup tips. You spill.' },
+      { label: 'Be frozen', next: 'ice', consequence: 'The air turns cold around you.' },
+    ] },
+  { id: 'you', word: 'You', text: 'You are inside a person. Blood, brain, fingers, knees.', chapter: 'you', form: 'drop', next: 'breath' },
+  { id: 'breath', word: 'Breath', text: 'Someone exhales. You leave as a breath, warm and invisible.', chapter: 'you', form: 'vapor', next: 'cloud' },
+  { id: 'ice', word: 'Ice', text: 'You lock into a crystal. Nothing moves. Then it warms.', chapter: 'lab', form: 'ice', next: 'drain' },
+  { id: 'drain', word: 'Drain', text: 'Sink, street, gutter. You go down.', chapter: 'soil', form: 'drop', next: 'river' },
+  // right: the river that accelerates
+  { id: 'river', word: 'River', text: 'Streams merge. The river carries you, and a little mountain with it.', chapter: 'mountain', form: 'drop', next: 'sea' },
+  { id: 'sea', word: 'Ocean', text: 'You reach the sea, and drift for years.', chapter: 'ocean', form: 'drop', next: 'evaporate' },
+  { id: 'evaporate', word: 'Evaporation', text: 'Sun warms the surface. You lift off.', chapter: 'ocean', form: 'vapor', next: 'rise',
+    discover: { term: 'evaporation', line: 'You just left the ocean without a boat.' } },
+  { id: 'rise', word: 'Rise', text: 'You are a loose haze, drifting up with the warm air.', chapter: 'cloud', form: 'vapor', next: 'cloud' },
+  { id: 'cloud', word: 'Cloud', text: 'High up you cool. You cling to a speck of dust with a billion others.', chapter: 'cloud', form: 'vapor', next: 'rain' },
+  { id: 'rain', word: 'Rain', text: 'You are heavy now. You fall.', chapter: 'rain', form: 'rain', next: 'ground' },
+  { id: 'ground', word: 'Ground', text: 'You land on the ground. What is under you?', chapter: 'soil', form: 'drop',
+    choices: [
+      { label: 'Rock', next: 'runoff', consequence: 'Nowhere to go but along.' },
+      { label: 'Sand', next: 'sink', consequence: 'The grains are wide apart.' },
+      { label: 'Clay', next: 'sit', consequence: 'The grains are packed close.' },
+    ] },
+  // rock: fast runoff
+  { id: 'runoff', word: 'Runoff', text: 'You cannot get in. You run off across the surface, fast.', chapter: 'soil', form: 'drop', next: 'gully',
+    discover: { term: 'permeability', line: 'You just discovered permeability.' } },
+  { id: 'gully', word: 'Gully', text: 'You pour into a gully and race for the river, then the cold high air lifts you.', chapter: 'mountain', form: 'drop', next: 'again' },
+  // sand: quick sink to groundwater, back at a spring
+  { id: 'sink', word: 'Sink', text: 'You sink at once, between the grains.', chapter: 'soil', form: 'drop', next: 'aquifer',
+    discover: { term: 'permeability', line: 'You just discovered permeability.' } },
+  { id: 'aquifer', word: 'Groundwater', text: 'You join the dark water under everything. You wait for years.', chapter: 'soil', form: 'drop', next: 'spring' },
+  { id: 'spring', word: 'Spring', text: 'Pressure pushes you up. You bubble out of a hillside, cold and clear.', chapter: 'mountain', form: 'drop', next: 'again' },
+  // clay: sits, some evaporates, some seeps slowly to a root
+  { id: 'sit', word: 'Clay', text: 'You sit on top. Some of you lifts into the air. The rest waits.', chapter: 'soil', form: 'drop', next: 'seep',
+    discover: { term: 'permeability', line: 'You just discovered permeability.' } },
+  { id: 'seep', word: 'Seep', text: 'Slowly, slowly, you creep down between the grains.', chapter: 'soil', form: 'drop', next: 'root' },
+  { id: 'root', word: 'Root', text: 'A root finds you. It pulls you in.', chapter: 'tree', form: 'drop', next: 'leaf' },
+  { id: 'leaf', word: 'Leaf', text: 'Up the trunk, out through a leaf, into the air.', chapter: 'tree', form: 'vapor', next: 'again',
+    discover: { term: 'transpiration', line: 'You just left through a leaf.' } },
+  // the loop closes
+  { id: 'again', word: 'Snow', text: 'Cold on a mountain peak. You are a snowflake. You fall.', chapter: 'mountain', form: 'snow',
+    discover: { term: 'the water cycle', line: 'You just went all the way around.' } },
 ];

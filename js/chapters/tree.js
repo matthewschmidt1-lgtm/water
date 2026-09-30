@@ -1,4 +1,4 @@
-// 05 — Tree. Water climbs from root tips to leaves with no pump at all.
+// Tree. Water climbs from root tips to leaves with no pump at all.
 // The branch drawer is recursive; its segments double as the path graph particles follow.
 
 const MAX = 220;
@@ -174,7 +174,7 @@ export default {
         #tree .stage { display: block; font-family: var(--serif); font-size: 1.6rem; letter-spacing: 0.04em; text-transform: none; color: var(--cyan); margin-top: 4px; min-height: 1.4em; }
       </style>
       <div class="chapter-body left">
-        <p class="chapter-kicker">05 — Tree</p>
+        <p class="chapter-kicker">Tree</p>
         <h2>Water climbs a tree without a pump.</h2>
         <p class="lede">Tap the tree and follow the water. It goes in at the bottom and leaves at the top.</p>
         <div class="controls"><button class="btn send-up">Send water up</button></div>

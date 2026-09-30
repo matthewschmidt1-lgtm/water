@@ -1,4 +1,4 @@
-// 03 — Mountain. Layered silhouettes, a snowcap, streams that join into a river.
+// Mountain. Layered silhouettes, a snowcap, streams that join into a river.
 // "Follow me" releases one drop at the snowline and the camera walks it down to the river.
 
 const PAN = 90;            // max camera travel in px
@@ -183,7 +183,7 @@ export default {
     const body = document.createElement('div');
     body.className = 'chapter-body left';
     body.innerHTML = `
-      <p class="chapter-kicker">03 — Mountain</p>
+      <p class="chapter-kicker">Mountain</p>
       <h2>Follow one drop downhill.</h2>
       <p class="lede">Snow on the peak. Sun in the morning. A drop lets go and starts to slide.</p>
       <div class="controls">

@@ -1,4 +1,4 @@
-// 02 — Rain. Procedural rain over a dark-blue sky, landing in a puddle band.
+// Rain. Procedural rain over a dark-blue sky, landing in a puddle band.
 // Four weathers. Storm brings gusts and lightning. The breath eases and hurries the rain.
 
 const MAX = 400, MAX_RINGS = 40;
@@ -66,7 +66,7 @@ export default {
     const body = document.createElement('div');
     body.className = 'chapter-body left';
     body.innerHTML = `
-      <p class="chapter-kicker">02 — Rain</p>
+      <p class="chapter-kicker">Rain</p>
       <h2>Change the weather.</h2>
       <p class="lede">Some rain whispers. Some rain shouts. Pick one, then tap the puddle and listen.</p>
       <div class="controls"><div class="chip-row" role="group" aria-label="Weather">${
