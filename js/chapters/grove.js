@@ -52,7 +52,8 @@ export default {
       #grove .soil-body { position: absolute; top: calc(var(--soil-top) + 28px); right: max(16px, 6vw); left: auto; margin: 0; padding: 0 16px 40px; max-width: 460px; }
       @media (max-width: 820px) {
         #grove { min-height: auto; }
-        #grove .soil-body { position: static; margin: 0; padding: 8px 16px 40px; max-width: none; }
+        #grove .soil-body { position: static; margin: 0; padding: 8px 16px calc(120px + env(safe-area-inset-bottom)); max-width: none; }
+        #grove .chapter-body:not(.soil-body) { padding-bottom: 28px; }   /* the sky's copy runs straight on into the soil's */
       }
     </style>`);
     base.resize();   // the section just grew; measure it before laying anything out
