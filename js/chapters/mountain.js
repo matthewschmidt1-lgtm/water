@@ -96,20 +96,88 @@ function makeBranch(X, Y, W) {
   return { n, X, Y, W, TX, TY, CALM, L, bank: ribbon(1.0, 1.6), bed: ribbon(1.0, 0), core: ribbon(0.5, 0) };
 }
 
+// A stone, drawn once: an irregular rounded outline, lit from the upper left by the sky, darker and wet toward
+// the waterline, with a few facets and mineral specks. Kept as a sprite so each frame is one drawImage.
+function rockSprite(r, rnd, wet) {
+  const S = 2, pad = 4, size = Math.ceil(r * 2.9 + pad * 2);
+  const cv = document.createElement('canvas'); cv.width = size * S; cv.height = size * S;
+  const g = cv.getContext('2d'); g.scale(S, S); g.translate(size / 2, size / 2);
+  const n = 9 + Math.floor(rnd() * 4), pts = [];
+  const squash = 0.62 + rnd() * 0.16, lean = (rnd() - 0.5) * 0.5;
+  for (let i = 0; i < n; i++) {
+    const a = (i / n) * 6.283 + (rnd() - 0.5) * 0.35, rad = r * (0.86 + rnd() * 0.42);
+    pts.push([Math.cos(a) * rad + Math.sin(a) * lean * r * 0.3, Math.sin(a) * rad * squash]);
+  }
+  const outline = () => {
+    g.beginPath();
+    for (let i = 0; i < n; i++) {
+      const p = pts[i], q = pts[(i + 1) % n], mx = (p[0] + q[0]) / 2, my = (p[1] + q[1]) / 2;
+      if (i === 0) g.moveTo((pts[n - 1][0] + p[0]) / 2, (pts[n - 1][1] + p[1]) / 2);
+      g.quadraticCurveTo(p[0], p[1], mx, my);
+    }
+    g.closePath();
+  };
+  // body: warm-grey stone under a cool sky
+  const tone = 0.85 + rnd() * 0.3, warm = rnd() * 14;
+  const col = (v, a = 1) => `rgba(${Math.round((v + warm * 0.5) * tone)},${Math.round((v + 2) * tone)},${Math.round((v + 8 - warm * 0.3) * tone)},${a})`;
+  const body = g.createLinearGradient(-r, -r * squash, r * 0.7, r * squash);
+  body.addColorStop(0, col(128)); body.addColorStop(0.45, col(86)); body.addColorStop(1, col(34));
+  outline(); g.fillStyle = body; g.fill();
+  g.save(); outline(); g.clip();
+  // facets: a couple of planes catching less light
+  for (let k = 0; k < 3; k++) {
+    const a = rnd() * 6.283, d = r * (0.15 + rnd() * 0.5);
+    g.fillStyle = `rgba(10,16,22,${0.1 + rnd() * 0.14})`;
+    g.beginPath(); g.moveTo(Math.cos(a) * d, Math.sin(a) * d * squash);
+    g.lineTo(Math.cos(a + 0.9) * r * 1.4, Math.sin(a + 0.9) * r * 1.4); g.lineTo(Math.cos(a + 2.2) * r * 1.4, Math.sin(a + 2.2) * r * 1.4); g.closePath(); g.fill();
+  }
+  // a hairline crack
+  g.strokeStyle = 'rgba(8,12,18,0.35)'; g.lineWidth = 0.6;
+  g.beginPath(); let cx = -r * 0.5 + rnd() * r * 0.4, cy = -r * squash * 0.5; g.moveTo(cx, cy);
+  for (let k = 0; k < 4; k++) { cx += r * (0.1 + rnd() * 0.25); cy += r * squash * (0.15 + rnd() * 0.3); g.lineTo(cx, cy); } g.stroke();
+  // mineral specks and lichen
+  for (let k = 0; k < Math.round(14 + r * 1.6); k++) {
+    const a = rnd() * 6.283, d = Math.sqrt(rnd()) * r * 1.1;
+    g.fillStyle = rnd() < 0.5 ? `rgba(210,220,226,${0.07 + rnd() * 0.12})` : `rgba(8,12,16,${0.1 + rnd() * 0.16})`;
+    g.beginPath(); g.arc(Math.cos(a) * d, Math.sin(a) * d * squash, 0.35 + rnd() * Math.max(0.6, r * 0.05), 0, 7); g.fill();
+  }
+  // the top takes the sky's light
+  const lit = g.createRadialGradient(-r * 0.35, -r * squash * 0.55, 0, -r * 0.35, -r * squash * 0.55, r * 1.05);
+  lit.addColorStop(0, 'rgba(205,224,238,0.38)'); lit.addColorStop(1, 'rgba(205,224,238,0)');
+  g.fillStyle = lit; g.fillRect(-r * 1.5, -r * 1.5, r * 3, r * 3);
+  // wet and dark where the water has been
+  const wetG = g.createLinearGradient(0, r * squash * (wet ? 0.05 : 0.45), 0, r * squash * 1.05);
+  wetG.addColorStop(0, 'rgba(6,14,22,0)'); wetG.addColorStop(1, `rgba(6,14,22,${wet ? 0.72 : 0.5})`);
+  g.fillStyle = wetG; g.fillRect(-r * 1.5, -r * 1.5, r * 3, r * 3);
+  if (wet) {   // a thin gleam just above the dark band: the wet line
+    g.strokeStyle = 'rgba(190,235,245,0.22)'; g.lineWidth = 0.8;
+    g.beginPath(); g.ellipse(0, r * squash * 0.42, r * 0.95, r * squash * 0.22, 0, 0.15, Math.PI - 0.15); g.stroke();
+  }
+  g.restore();
+  // rim light on the upper-left edge
+  g.save(); outline(); g.clip();
+  g.strokeStyle = 'rgba(214,232,244,0.4)'; g.lineWidth = 1.6; g.translate(1.2, 1.4); outline(); g.stroke();
+  g.restore();
+  return { cv, size, squash };
+}
+
 function buildBrook(front) {
   const phone = w < 620;
   const maxW = w * (phone ? 0.36 : 0.21);
   const ytop = snowY + (h - snowY) * 0.2, yend = h + 12;
-  const M = 150, r = rng(7);
-  const ph0 = r() * 6.28, startX = peakX - w * 0.01;
+  const M = 220, r = rng(7);
+  const ph0 = r() * 6.28, ph1 = r() * 6.28, ph2 = r() * 6.28, startX = peakX - w * 0.01;
   const X = new Float32Array(M + 1), Y = new Float32Array(M + 1), W = new Float32Array(M + 1);
   for (let i = 0; i <= M; i++) {
     const s = i / M;
     const base = startX + (w / 2 - startX) * Math.pow(s, 0.8);
-    const amp = w * ((phone ? 0.03 : 0.04) + (phone ? 0.09 : 0.13) * Math.pow(s, 1.1));
-    const phase = ph0 + 6.283 * 2.6 * Math.pow(s, 0.65);
-    X[i] = base + amp * Math.sin(phase) * (1 - smooth(0.84, 1, s)) * smooth(0, 0.06, s);
-    Y[i] = ytop + s * (yend - ytop);
+    const amp = w * ((phone ? 0.028 : 0.034) + (phone ? 0.09 : 0.125) * Math.pow(s, 1.15));
+    const phase = ph0 + 6.283 * 2.5 * Math.pow(s, 0.68);
+    // a mountain stream never runs straight: a main meander with a smaller, slower one riding on it
+    const wander = Math.sin(phase) + 0.3 * Math.sin(phase * 1.7 + ph1) + 0.1 * (1 - s) * Math.sin(phase * 3.3 + ph2);
+    X[i] = base + amp * wander * (1 - smooth(0.84, 1, s)) * smooth(0, 0.04, s);
+    // a little slower on the high slope, then it runs out toward you
+    Y[i] = ytop + (0.6 * s + 0.4 * Math.pow(s, 1.3)) * (yend - ytop);
     W[i] = 2.2 + (maxW - 2.2) * Math.pow(s, 1.7);
   }
   main = makeBranch(X, Y, W);
@@ -117,14 +185,14 @@ function buildBrook(front) {
   bedGrad = c.createLinearGradient(0, ytop, 0, h);
   bedGrad.addColorStop(0, '#0c3347'); bedGrad.addColorStop(1, '#0f5266');
   branches = [main];
-  const starts = [-0.055, 0.045, 0.1], joins = [0, 0, 16];
+  const starts = [-0.055, 0.045, 0.1], joins = [0, 0, 24];
   for (let k = 0; k < 3; k++) {
     const sx = peakX + starts[k] * w, j = joins[k], ex = X[j], ey = Y[j];
     const sy = Math.max(front(sx), snowY - 6) + 2, m = 34, wig = r() * 6.28;
     const sX = new Float32Array(m + 1), sY = new Float32Array(m + 1), sW = new Float32Array(m + 1);
     for (let i = 0; i <= m; i++) {
       const s = i / m;
-      sX[i] = sx + (ex - sx) * s + w * 0.018 * Math.sin(s * 9 + wig) * Math.sin(Math.PI * s);
+      sX[i] = sx + (ex - sx) * s + w * (0.026 * Math.sin(s * 9 + wig) + 0.011 * Math.sin(s * 21 + wig * 2)) * Math.sin(Math.PI * s);
       sY[i] = Math.max(sy + (ey - sy) * Math.pow(s, 0.9), front(sX[i]) + 2);
       sW[i] = 1.2 + s * s * (W[j] * 0.5 + 0.8);
     }
@@ -145,7 +213,7 @@ function buildBrook(front) {
     const [t0, side] = spec[q], i = Math.round(t0 * M), z = t0;
     const hw = W[i] / 2, rr = (2.4 + z * 20) * (0.8 + r() * 0.5) * (phone ? 0.68 : 1);
     const wet = Math.abs(side) < 1;
-    rocks.push({ x: X[i] - main.TY[i] * side * hw * (wet ? 0.9 : 1) - main.TY[i] * (wet ? 0 : Math.sign(side) * rr * 0.3), y: Y[i] + main.TX[i] * side * hw, r: rr, wet, ang: Math.atan2(-main.TX[i], main.TY[i]), ph: r() * 6.28, z });
+    rocks.push({ x: X[i] - main.TY[i] * side * hw * (wet ? 0.9 : 1) - main.TY[i] * (wet ? 0 : Math.sign(side) * rr * 0.3), y: Y[i] + main.TX[i] * side * hw, r: rr, wet, ang: Math.atan2(-main.TX[i], main.TY[i]), ph: r() * 6.28, z, spr: rockSprite(rr, r, wet) });
   }
 }
 
@@ -269,14 +337,16 @@ function drawBrook(dt, b) {
         c.beginPath(); c.moveTo(j * r * 0.55, r * 0.5); c.quadraticCurveTo(j * r * 0.7 + wob, r + L2 * 0.5, j * r * 1.05, r * 0.5 + L2); c.stroke();
       }
     }
-    c.fillStyle = 'rgba(4,14,24,0.45)';       // shadow
-    c.beginPath(); c.ellipse(r * 0.15, r * 0.35, r * 1.3, r * 0.8, 0, 0, 7); c.fill();
-    c.fillStyle = '#34506a';
-    c.beginPath(); c.ellipse(0, 0, r * 1.15, r * 0.85, 0, 0, 7); c.fill();
-    c.fillStyle = '#5f8199';
-    c.beginPath(); c.ellipse(-r * 0.2, -r * 0.22, r * 0.8, r * 0.5, -0.2, 0, 7); c.fill();
-    c.fillStyle = 'rgba(190,225,240,0.35)';
-    c.beginPath(); c.ellipse(-r * 0.35, -r * 0.4, r * 0.3, r * 0.16, -0.3, 0, 7); c.fill();
+    // the stone itself keeps its own light: drawn upright, not turned with the current
+    c.rotate(-k.ang);
+    c.fillStyle = 'rgba(2,10,18,0.5)';        // contact shadow, falling away from the light
+    c.beginPath(); c.ellipse(r * 0.28, r * k.spr.squash * 0.72, r * 1.15, r * k.spr.squash * 0.42, 0, 0, 7); c.fill();
+    if (k.wet) {                              // its dark reflection in the moving water
+      c.globalAlpha = 0.22; c.save(); c.translate(0, r * k.spr.squash * 1.5); c.scale(1, -0.45);
+      c.drawImage(k.spr.cv, -k.spr.size / 2, -k.spr.size / 2, k.spr.size, k.spr.size); c.restore(); c.globalAlpha = 1;
+    }
+    c.drawImage(k.spr.cv, -k.spr.size / 2, -k.spr.size / 2, k.spr.size, k.spr.size);
+    c.rotate(k.ang);
     if (k.wet) {
       c.lineWidth = 1 + k.z * 1.6;
       c.strokeStyle = `rgba(240,252,255,${0.55 * tw})`;
