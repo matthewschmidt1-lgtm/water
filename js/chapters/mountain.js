@@ -180,7 +180,7 @@ function rockSprite(r, rnd, wet) {
 
 function buildBrook(front) {
   const phone = w < 620;
-  const maxW = w * (phone ? 0.62 : 0.5);
+  const maxW = w * (phone ? 0.84 : 0.7);
   const ytop = snowY + (h - snowY) * 0.2, yend = h + 12;
   const M = 220, r = rng(7);
   const ph0 = r() * 6.28, ph1 = r() * 6.28, ph2 = r() * 6.28, startX = peakX - w * 0.01;
@@ -196,7 +196,7 @@ function buildBrook(front) {
     // a little slower on the high slope, then it runs out toward you
     Y[i] = ytop + (0.6 * s + 0.4 * Math.pow(s, 1.3)) * (yend - ytop);
     // it widens early and keeps widening; the banks pinch and swell the way real ones do
-    W[i] = (4 + (maxW - 4) * Math.pow(s, 1.6)) * (1 + 0.13 * Math.sin(s * 31 + ph1) + 0.07 * Math.sin(s * 71 + ph2));
+    W[i] = (7 + (maxW - 7) * Math.pow(s, 1.35)) * (1 + 0.13 * Math.sin(s * 31 + ph1) + 0.07 * Math.sin(s * 71 + ph2));
   }
   main = makeBranch(X, Y, W);
   brookTop = ytop;
