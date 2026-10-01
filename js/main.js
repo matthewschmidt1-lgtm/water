@@ -437,7 +437,7 @@ const trio = document.getElementById('closer');
 if (trio) {
   const tiles = [...trio.querySelectorAll('.tile')];
   const closeBtn = trio.querySelector('.trio-close');
-  const folded = ['cup', 'lab', 'you'];
+  const folded = ['grove', 'cup', 'lab', 'you'];
   let openName = null;
   let openSeq = 0;
   // Warm the modules while the reader nears the tiles so a tile opens onto a chapter that mounts at once.

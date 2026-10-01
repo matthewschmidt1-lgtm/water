@@ -47,11 +47,12 @@ Commit to `main` and push; Railway redeploys. `package.json` runs `serve -s . -l
 1. **Hero** (`js/hero.js`): a night lake. A drop falls, WATER appears, then the tagline a second later. The title sweats at 3 s, its letters fall into the lake and splash, then a lone down arrow appears (it fades once the visitor scrolls). The lake has its own weather: wisp cloud, gusts, rain, mist. It reacts to presence (`js/presence.js`): pointer wake, idle glassiness, tap splashes.
 2. **Rain** (`rain.js`): Drizzle, Rain, Downpour, Storm chips. Taller band on phones.
 3. **Mountain** (`mountain.js`): a river in perspective that winds down from the snowline toward the viewer, with gravel banks, current lines, and lit stones. A drop runs it on arrival. Taller band on phones.
-4. **Sky landscape** (`grove.js`): one tall section (170vh on desktop) that composes three modules on stacked canvases: `cloud.js` (dawn sky, cloud that speaks a line each exhale), `tree.js` (on the left, sap climbing to transpiration), `soil.js` (cutaway ground along the bottom, hold the sky to rain, Sand/Loam/Clay chips).
-5. **Ocean** (`ocean.js`): dispersive waves with peaked crests, a wind slider (the owner wants this kept), tap to drop a stone.
-6. **Closer** (`#closer`): three words on the shore, Lab, Cup, You. Clicking one opens that chapter in place (`lab.js`, `cup.js`, `you.js`); one open at a time. The menu and the journey open the right one first via the `water:open` event.
-7. **Ending** (`#cycle`, logic in `js/main.js`): still water, one drop, WATER, "Enjoy it while it lasts." Then the text sweats, letters fall and splash, and a small angled whale fluke rises and slides under. It replays every time the visitor scrolls down into it.
-8. **Footer**: only "Made by Matty", linking to https://matthew-schmidt-production.up.railway.app/.
+4. **Ocean** (`ocean.js`): dispersive waves with peaked crests, a wind slider (the owner wants this kept), tap to drop a stone.
+5. **Closer** (`#closer`): four words on the shore, Sky, Lab, Cup, You. Clicking one opens that chapter in place; one open at a time. The menu and the journey open the right one first via the `water:open` event.
+   - **Sky** (`grove.js`): one tall landscape (170vh on desktop) that composes three modules on stacked canvases: `cloud.js` (dawn sky, cloud that speaks a line each exhale), `tree.js` (on the left, sap climbing to transpiration), `soil.js` (cutaway ground along the bottom, hold the sky to rain, Sand/Loam/Clay chips).
+   - **Lab** (`lab.js`), **Cup** (`cup.js`), **You** (`you.js`).
+6. **Ending** (`#cycle`, logic in `js/main.js`): still water, one drop, WATER, "Enjoy it while it lasts." Then the text sweats, letters fall and splash, and a small angled whale fluke rises and slides under. It replays every time the visitor scrolls down into it.
+7. **Footer**: only "Made by Matty", linking to https://matthew-schmidt-production.up.railway.app/.
 
 Global mechanics:
 
