@@ -49,6 +49,7 @@ const RECIPES = {
   mountain: { type: 'lowpass',  freq: 900,  q: 0.4, gain: 0.35, lfo: 0.08, lfoDepth: 300 },
   soil:     { type: 'lowpass',  freq: 150,  q: 0.3, gain: 0.15, lfo: 0.03, lfoDepth: 40 },
   tree:     { type: 'bandpass', freq: 1200, q: 0.4, gain: 0.18, lfo: 0.12, lfoDepth: 400 },
+  grove:    { type: 'bandpass', freq: 1000, q: 0.4, gain: 0.2,  lfo: 0.1,  lfoDepth: 350 },
   cup:      { type: 'lowpass',  freq: 300,  q: 0.3, gain: 0.12, lfo: 0.02, lfoDepth: 60 },
   ocean:    { type: 'lowpass',  freq: 500,  q: 0.6, gain: 0.45, lfo: 0.09, lfoDepth: 350 },
   lab:      { type: 'highpass', freq: 2000, q: 0.3, gain: 0.08, lfo: 0.2,  lfoDepth: 500 },

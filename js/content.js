@@ -54,8 +54,8 @@ export const FOLLOW = [
   { id: 'sea', word: 'Ocean', text: 'You reach the sea, and drift for years.', chapter: 'ocean', form: 'drop', next: 'evaporate' },
   { id: 'evaporate', word: 'Evaporation', text: 'Sun warms the surface. You lift off.', chapter: 'ocean', form: 'vapor', next: 'rise',
     discover: { term: 'evaporation', line: 'You just left the ocean without a boat.' } },
-  { id: 'rise', word: 'Rise', text: 'You are a loose haze, drifting up with the warm air.', chapter: 'cloud', form: 'vapor', next: 'cloud' },
-  { id: 'cloud', word: 'Cloud', text: 'High up you cool. You cling to a speck of dust with a billion others.', chapter: 'cloud', form: 'vapor', next: 'rain' },
+  { id: 'rise', word: 'Rise', text: 'You are a loose haze, drifting up with the warm air.', chapter: 'grove', form: 'vapor', next: 'cloud' },
+  { id: 'cloud', word: 'Cloud', text: 'High up you cool. You cling to a speck of dust with a billion others.', chapter: 'grove', form: 'vapor', next: 'rain' },
   { id: 'rain', word: 'Rain', text: 'You are heavy now. You fall.', chapter: 'rain', form: 'rain', next: 'ground' },
   { id: 'ground', word: 'Ground', text: 'You land on the ground. What is under you?', chapter: 'soil', form: 'drop',
     choices: [
@@ -76,8 +76,8 @@ export const FOLLOW = [
   { id: 'sit', word: 'Clay', text: 'You sit on top. Some of you lifts into the air. The rest waits.', chapter: 'soil', form: 'drop', next: 'seep',
     discover: { term: 'permeability', line: 'You just discovered permeability.' } },
   { id: 'seep', word: 'Seep', text: 'Slowly, slowly, you creep down between the grains.', chapter: 'soil', form: 'drop', next: 'root' },
-  { id: 'root', word: 'Root', text: 'A root finds you. It pulls you in.', chapter: 'tree', form: 'drop', next: 'leaf' },
-  { id: 'leaf', word: 'Leaf', text: 'Up the trunk, out through a leaf, into the air.', chapter: 'tree', form: 'vapor', next: 'again',
+  { id: 'root', word: 'Root', text: 'A root finds you. It pulls you in.', chapter: 'grove', form: 'drop', next: 'leaf' },
+  { id: 'leaf', word: 'Leaf', text: 'Up the trunk, out through a leaf, into the air.', chapter: 'grove', form: 'vapor', next: 'again',
     discover: { term: 'transpiration', line: 'You just left through a leaf.' } },
   // the loop closes
   { id: 'again', word: 'Snow', text: 'Cold on a mountain peak. You are a snowflake. You fall.', chapter: 'mountain', form: 'snow',

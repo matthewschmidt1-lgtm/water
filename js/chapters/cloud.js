@@ -23,6 +23,7 @@ let c, w, h, reduced, audio;
 let sky = null, sun = null, cloudLoose = null, cloudTight = null, wisp = null, dropSpr = null, glowSpr = null;
 let S = 1;                     // sprite scale (device px per css px)
 let unit = 40;                 // cloud unit size in px
+let high = false;              // sharing the sky with a tree: the cloud sits high and speaks above itself
 let anchorX = 0, cy = 0;       // where the cloud lives
 let t = 0, glow = 0.5;
 let sayEl = null, sayIdx = 0, inside = false;
@@ -79,6 +80,8 @@ function layout(ctx) {
   unit = w < 900 ? Math.min(w * 0.15, h * 0.14) : Math.min(w, h) * 0.115;
   anchorX = w < 900 ? w * 0.5 : w * 0.7;
   cy = w < 900 ? h * 0.62 : h * 0.4;
+  high = !!ctx.high;
+  if (ctx.high) { unit *= 0.72; anchorX = w < 900 ? w * 0.5 : w * 0.7; cy = w < 900 ? h * 0.2 : h * 0.22; }   // sharing the sky with a tree below
 
   // Dawn sky, once.
   sky = canvasOf(w * S, h * S);
@@ -135,10 +138,16 @@ function speak() {
   sayEl.textContent = LINES[sayIdx % LINES.length];
   sayIdx++;
   // beside the drop that let go, just under the cloud; kept inside the scene
-  const left = Math.max(12, Math.min(w - 12, cloudX() + dx + 18));
-  sayEl.style.left = left + 'px';
-  sayEl.style.top = Math.min(h - 40, cloudY() + 1.7 * unit) + 'px';
-  if (left > w * 0.6) { sayEl.style.transform = 'translateX(-100%)'; sayEl.style.left = (left - 36) + 'px'; } else sayEl.style.transform = '';
+  if (high) {
+    sayEl.style.left = Math.round(cloudX()) + 'px';
+    sayEl.style.top = Math.max(14, Math.round(cloudY() - 2.1 * unit)) + 'px';
+    sayEl.style.transform = 'translateX(-50%)';
+  } else {
+    const left = Math.max(12, Math.min(w - 12, cloudX() + dx + 18));
+    sayEl.style.left = left + 'px';
+    sayEl.style.top = Math.min(h - 40, cloudY() + 1.7 * unit) + 'px';
+    if (left > w * 0.6) { sayEl.style.transform = 'translateX(-100%)'; sayEl.style.left = (left - 36) + 'px'; } else sayEl.style.transform = '';
+  }
   sayEl.classList.add('show');
   clearTimeout(sayTimer); sayTimer = setTimeout(() => sayEl.classList.remove('show'), 9500);
   audio.plip(0.9 + Math.random() * 0.5);

@@ -130,9 +130,12 @@ function step(dt, breath) {
 
 function draw(breath) {
   const t = time / 1000;
-  const bg = c.createLinearGradient(0, 0, 0, h);
-  bg.addColorStop(0, '#071a2e'); bg.addColorStop(0.75, '#153a4a'); bg.addColorStop(1, '#1b3f4f');
-  c.fillStyle = bg; c.fillRect(0, 0, w, h);
+  if (ctx.transparentSky) c.clearRect(0, 0, w, h);
+  else {
+    const bg = c.createLinearGradient(0, 0, 0, h);
+    bg.addColorStop(0, '#071a2e'); bg.addColorStop(0.75, '#153a4a'); bg.addColorStop(1, '#1b3f4f');
+    c.fillStyle = bg; c.fillRect(0, 0, w, h);
+  }
   // soil band
   c.fillStyle = '#2e2117'; c.fillRect(0, soilY, w, h - soilY);
   c.fillStyle = '#6b4f3a'; c.fillRect(0, soilY, w, 3);
@@ -167,7 +170,7 @@ export default {
   mount(section, context) {
     el = section; ctx = context; c = ctx.c2d; w = ctx.w; h = ctx.h;
     build();
-    el.style.background = '#071a2e';
+    if (!ctx.transparentSky) el.style.background = '#071a2e';
     el.insertAdjacentHTML('beforeend', `
       <style>
         #tree .chapter-canvas { touch-action: manipulation; cursor: pointer; }
