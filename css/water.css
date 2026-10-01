@@ -307,11 +307,11 @@ body.following .bottom-bar { opacity: 0 !important; pointer-events: none !import
 
 /* Footer */
 footer {
-  padding: 80px 16px 120px; text-align: center; color: var(--muted);
+  padding: 18px 16px 84px; text-align: center; color: var(--muted);   /* the bottom room only clears the two fixed buttons */
   background: linear-gradient(var(--deep), #000);
   font-family: var(--serif);
 }
-footer .made { margin-top: 36px; font-family: var(--font); font-size: 0.72rem; letter-spacing: 0.3em; text-transform: uppercase; }
+footer .made { margin: 0; font-family: var(--font); font-size: 0.72rem; letter-spacing: 0.3em; text-transform: uppercase; }
 footer .made a { color: var(--muted); text-decoration: none; border-bottom: 1px solid rgba(244, 249, 251, 0.2); padding-bottom: 2px; transition: color 0.4s, border-color 0.4s; }
 footer .made a:hover { color: var(--accent); border-color: var(--accent); }
 footer .motto { font-size: clamp(1.4rem, 4vw, 2.2rem); letter-spacing: 0.25em; text-transform: uppercase; color: var(--ink); line-height: 1.6; margin: 0 0 24px; }
@@ -415,7 +415,7 @@ body[data-scene="you"]      { --accent: #ffd6a8; --accent-soft: rgba(255, 214, 1
   .hero .scroll-cue { font-size: 2.5rem; }
 
   /* WHERE IS WATER? and FOLLOW THE WATER: complete, reachable, and small enough to leave the scene visible. */
-  footer { padding-bottom: calc(120px + env(safe-area-inset-bottom)); }
+  footer { padding-bottom: calc(84px + env(safe-area-inset-bottom)); }
 }
 @media (max-width: 600px) {
   .chapter-body.left, .chapter-body.right { margin-left: 0; margin-right: 0; }
