@@ -77,6 +77,7 @@ function layout(ctx) {
 const smooth = (a, b, x) => { const k = Math.max(0, Math.min(1, (x - a) / (b - a))); return k * k * (3 - 2 * k); };
 
 // A branch: sampled centerline with width, normal, tangent, calmness, plus cached ribbon paths.
+const FS = 0.42;   // ground seen at a low angle: across-the-slope distances are squeezed vertically
 function makeBranch(X, Y, W) {
   const n = X.length, TX = new Float32Array(n), TY = new Float32Array(n), CALM = new Float32Array(n);
   let L = 0;
@@ -89,11 +90,27 @@ function makeBranch(X, Y, W) {
   for (let i = 0; i < n; i++) { const a = Math.max(0, i - 4), b = Math.min(n - 1, i + 4); CALM[i] = Math.max(0, 1 - Math.hypot(TX[b] - TX[a], TY[b] - TY[a]) * 1.6); }
   const ribbon = (k, add) => {
     const p = new Path2D();
-    for (let i = 0; i < n; i++) { const hw = W[i] * k / 2 + add; const x = X[i] + TY[i] * hw * -1, y = Y[i] + TX[i] * hw; i ? p.lineTo(x, y) : p.moveTo(x, y); }
-    for (let i = n - 1; i >= 0; i--) { const hw = W[i] * k / 2 + add; p.lineTo(X[i] + TY[i] * hw, Y[i] - TX[i] * hw); }
+    for (let i = 0; i < n; i++) { const hw = W[i] * k / 2 + add; const x = X[i] + TY[i] * hw * -1, y = Y[i] + TX[i] * hw * FS; i ? p.lineTo(x, y) : p.moveTo(x, y); }
+    for (let i = n - 1; i >= 0; i--) { const hw = W[i] * k / 2 + add; p.lineTo(X[i] + TY[i] * hw, Y[i] - TX[i] * hw * FS); }
     p.closePath(); return p;
   };
-  return { n, X, Y, W, TX, TY, CALM, L, bank: ribbon(1.0, 1.6), bed: ribbon(1.0, 0), core: ribbon(0.5, 0) };
+  // Fills are built from one quad per segment, so a tight bend (where the inner bank folds over itself)
+  // overlaps instead of punching a hole. `shift` slides the band sideways: the deep channel leans to the outside of bends.
+  const band = (k, add, shift) => {
+    const p = new Path2D();
+    const pt = (i, sgn) => {
+      let off = 0;
+      if (shift) { const a = Math.max(0, i - 16), b2 = Math.min(n - 1, i + 16); off = Math.max(-0.12, Math.min(0.12, (TX[b2] - TX[a]) * 0.5)) * W[i]; }
+      const hw = (W[i] * k / 2 + add) * sgn + off;
+      return [X[i] - TY[i] * hw, Y[i] + TX[i] * hw * FS];
+    };
+    for (let i = 0; i < n - 1; i++) {
+      const a = pt(i, 1), b = pt(i + 1, 1), d = pt(i + 1, -1), e = pt(i, -1);
+      p.moveTo(a[0], a[1]); p.lineTo(b[0], b[1]); p.lineTo(d[0], d[1]); p.lineTo(e[0], e[1]); p.closePath();
+    }
+    return p;
+  };
+  return { n, X, Y, W, TX, TY, CALM, L, bank: band(1.1, 2.5, false), bed: band(1.0, 0, false), edge: ribbon(1.0, 0), core: band(0.56, 0, true) };
 }
 
 // A stone, drawn once: an irregular rounded outline, lit from the upper left by the sky, darker and wet toward
@@ -163,7 +180,7 @@ function rockSprite(r, rnd, wet) {
 
 function buildBrook(front) {
   const phone = w < 620;
-  const maxW = w * (phone ? 0.36 : 0.21);
+  const maxW = w * (phone ? 0.62 : 0.5);
   const ytop = snowY + (h - snowY) * 0.2, yend = h + 12;
   const M = 220, r = rng(7);
   const ph0 = r() * 6.28, ph1 = r() * 6.28, ph2 = r() * 6.28, startX = peakX - w * 0.01;
@@ -171,19 +188,20 @@ function buildBrook(front) {
   for (let i = 0; i <= M; i++) {
     const s = i / M;
     const base = startX + (w / 2 - startX) * Math.pow(s, 0.8);
-    const amp = w * ((phone ? 0.028 : 0.034) + (phone ? 0.09 : 0.125) * Math.pow(s, 1.15));
-    const phase = ph0 + 6.283 * 2.5 * Math.pow(s, 0.68);
+    const amp = w * ((phone ? 0.028 : 0.034) + (phone ? 0.1 : 0.15) * Math.pow(s, 1.15));
+    const phase = ph0 + 6.283 * 2.1 * Math.pow(s, 0.62);   // quick turns up high, long sweeps where it is wide
     // a mountain stream never runs straight: a main meander with a smaller, slower one riding on it
     const wander = Math.sin(phase) + 0.3 * Math.sin(phase * 1.7 + ph1) + 0.1 * (1 - s) * Math.sin(phase * 3.3 + ph2);
-    X[i] = base + amp * wander * (1 - smooth(0.84, 1, s)) * smooth(0, 0.04, s);
+    X[i] = base + amp * wander * (1 - smooth(0.7, 1, s)) * smooth(0, 0.04, s);   // the last reach turns and comes straight at you
     // a little slower on the high slope, then it runs out toward you
     Y[i] = ytop + (0.6 * s + 0.4 * Math.pow(s, 1.3)) * (yend - ytop);
-    W[i] = 2.2 + (maxW - 2.2) * Math.pow(s, 1.7);
+    // it widens early and keeps widening; the banks pinch and swell the way real ones do
+    W[i] = (4 + (maxW - 4) * Math.pow(s, 1.6)) * (1 + 0.13 * Math.sin(s * 31 + ph1) + 0.07 * Math.sin(s * 71 + ph2));
   }
   main = makeBranch(X, Y, W);
   brookTop = ytop;
   bedGrad = c.createLinearGradient(0, ytop, 0, h);
-  bedGrad.addColorStop(0, '#0c3347'); bedGrad.addColorStop(1, '#0f5266');
+  bedGrad.addColorStop(0, '#5d86a3'); bedGrad.addColorStop(0.35, '#3b6a86'); bedGrad.addColorStop(1, '#17485c');
   branches = [main];
   const starts = [-0.055, 0.045, 0.1], joins = [0, 0, 24];
   for (let k = 0; k < 3; k++) {
@@ -201,8 +219,8 @@ function buildBrook(front) {
   }
   // glints advected along each branch
   glints = [];
-  const add = (br, cnt, bias) => { for (let i = 0; i < cnt; i++) glints.push({ br, t: Math.random(), lat: (Math.random() * 2 - 1) * 0.82, sp: 0.8 + Math.random() * 0.5, a: 0.4 + Math.random() * 0.6 }); void bias; };
-  add(main, phone ? 46 : 64, 0);
+  const add = (br, cnt, bias) => { for (let i = 0; i < cnt; i++) glints.push({ br, t: Math.random(), lat: (Math.random() * 2 - 1) * 0.86, sp: 0.8 + Math.random() * 0.5, a: 0.4 + Math.random() * 0.6, span: 5 + Math.random() * 9, dark: Math.random() < 0.32, ph: Math.random() * 6.28 }); void bias; };
+  add(main, phone ? 70 : 110, 0);
   for (let k = 0; k < 3; k++) add(streamsB[k], 5, 0);
   for (const g of glints) if (g.br === main) g.t = Math.pow(g.t, 0.7);
   // rocks
@@ -213,7 +231,7 @@ function buildBrook(front) {
     const [t0, side] = spec[q], i = Math.round(t0 * M), z = t0;
     const hw = W[i] / 2, rr = (2.4 + z * 20) * (0.8 + r() * 0.5) * (phone ? 0.68 : 1);
     const wet = Math.abs(side) < 1;
-    rocks.push({ x: X[i] - main.TY[i] * side * hw * (wet ? 0.9 : 1) - main.TY[i] * (wet ? 0 : Math.sign(side) * rr * 0.3), y: Y[i] + main.TX[i] * side * hw, r: rr, wet, ang: Math.atan2(-main.TX[i], main.TY[i]), ph: r() * 6.28, z, spr: rockSprite(rr, r, wet) });
+    rocks.push({ x: X[i] - main.TY[i] * side * hw * (wet ? 0.9 : 1) - main.TY[i] * (wet ? 0 : Math.sign(side) * rr * 0.3), y: Y[i] + main.TX[i] * side * hw * FS, r: rr, wet, ang: Math.atan2(-main.TX[i], main.TY[i]), ph: r() * 6.28, z, spr: rockSprite(rr, r, wet) });
   }
 }
 
@@ -294,29 +312,44 @@ function drawTaps(c, dt) {
 
 function drawBrook(dt, b) {
   const flow = reduced ? 0.03 : 1 + 0.55 * (1 - b);
-  c.fillStyle = 'rgba(5,18,30,0.55)';
+  // the shore: wet gravel, a shade lighter than the slope
+  c.fillStyle = 'rgba(92,104,112,0.5)';
   for (let i = 0; i < branches.length; i++) c.fill(branches[i].bank);
+  // the water: sky on its far reaches, depth near you
   c.fillStyle = bedGrad;
   for (let i = 0; i < branches.length; i++) c.fill(branches[i].bed);
-  c.fillStyle = 'rgba(70,175,190,0.14)';
-  for (let i = 0; i < branches.length; i++) c.fill(branches[i].core);
+  // the deep channel, darker, swinging to the outside of each bend
+  c.fillStyle = 'rgba(6,26,40,0.2)';
+  c.fill(main.core);
+  // a thin wet line where water meets gravel
+  c.strokeStyle = 'rgba(214,236,244,0.16)'; c.lineWidth = 1;
+  for (let i = 0; i < branches.length; i++) c.stroke(branches[i].edge);
 
-  // glints ride the current: faster downstream, faster on the exhale
-  c.lineCap = 'round';
+  // the current: long soft lines that follow the banks and bend with the river, some bright, some dark
+  c.lineCap = 'round'; c.lineJoin = 'round';
   for (let i = 0; i < glints.length; i++) {
     const g = glints[i], br = g.br, n1 = br.n - 1;
-    const fi = Math.min(n1 - 0.001, g.t * n1), k = fi | 0, f = fi - k;
+    const fi = Math.min(n1 - 0.001, g.t * n1), k = fi | 0;
     const z = Math.max(0, (br.Y[k] - brookTop) / (h - brookTop));
-    g.t += (0.025 + 0.12 * z) * g.sp * flow * dt / br.L;
-    if (g.t >= 1) { g.t = 0; g.lat = (Math.random() * 2 - 1) * 0.82; g.sp = 0.8 + Math.random() * 0.5; }
-    const x = br.X[k] + (br.X[k + 1] - br.X[k]) * f, y = br.Y[k] + (br.Y[k + 1] - br.Y[k]) * f;
-    const hw = (br.W[k] / 2) * g.lat, tx = br.TX[k], ty = br.TY[k];
-    const px = x - ty * hw, py = y + tx * hw, len = 2.5 + z * 16 * g.sp;
-    const calm = 0.45 + 0.55 * (1 - br.CALM[k]) + z * 0.2;
+    g.t += (0.022 + 0.1 * z) * g.sp * flow * dt / br.L;
+    if (g.t >= 1) { g.t = 0; g.lat = (Math.random() * 2 - 1) * 0.86; g.sp = 0.8 + Math.random() * 0.5; }
+    const span = Math.max(2, Math.min(g.span * (0.5 + z * 1.4), fi));
+    const calm = 0.5 + 0.5 * (1 - br.CALM[k]) + z * 0.15;
     const fade = Math.sin(Math.PI * g.t) ** 0.6;
-    c.strokeStyle = `rgba(190,246,252,${(g.a * calm * fade * (reduced ? 0.35 : 0.55 + 0.25 * Math.sin(t * 0.004 + i * 1.7))).toFixed(3)})`;
-    c.lineWidth = 0.7 + z * 1.7;
-    c.beginPath(); c.moveTo(px, py); c.lineTo(px - tx * len, py - ty * len); c.stroke();
+    const alpha = g.a * calm * fade * (g.dark ? 0.2 : 0.17) * (reduced ? 0.8 : 0.8 + 0.2 * Math.sin(t * 0.002 + g.ph));
+    c.strokeStyle = g.dark ? `rgba(6,26,40,${alpha.toFixed(3)})` : `rgba(218,240,248,${alpha.toFixed(3)})`;
+    c.lineWidth = (g.dark ? 1.2 : 0.7) + z * (g.dark ? 2.6 : 1.5);
+    c.beginPath();
+    const steps = Math.max(2, Math.ceil(span));
+    for (let j = 0; j <= steps; j++) {
+      const q = fi - span * (j / steps), qi = Math.max(0, q | 0), qf = q - qi, q2 = Math.min(n1, qi + 1);
+      const x = br.X[qi] + (br.X[q2] - br.X[qi]) * qf, y = br.Y[qi] + (br.Y[q2] - br.Y[qi]) * qf;
+      const lat = g.lat + 0.05 * Math.sin(q * 0.35 + g.ph);            // a current line drifts a little across the stream
+      const hw = (br.W[qi] / 2) * lat;
+      const px = x - br.TY[qi] * hw, py = y + br.TX[qi] * hw * FS;
+      j ? c.lineTo(px, py) : c.moveTo(px, py);
+    }
+    c.stroke();
   }
 
   // rocks: wake, stone, then the foam V on the upstream face
