@@ -46,14 +46,15 @@ function growRoot(parent, angle, len, depth) {
 
 function build() {
   nodes = []; rootTips = []; leafTips = []; seed = 11;
-  treeX = w > 820 ? w * 0.68 : w * 0.5;
-  soilY = h * 0.8; baseY = soilY;
-  const trunkLen = h * 0.24;
+  treeX = ctx.treeXFrac != null ? w * ctx.treeXFrac : (w > 820 ? w * 0.68 : w * 0.5);
+  soilY = ctx.baseY != null ? ctx.baseY : h * 0.8; baseY = soilY;
+  const scale = ctx.treeScale != null ? ctx.treeScale : 1;
+  const trunkLen = h * 0.24 * scale;
   trunk = addNode(treeX, baseY, treeX, baseY - trunkLen, 0, null, false);
   for (let i = 0; i < 3; i++) grow(trunk, -Math.PI / 2 + (i - 1) * 0.55 + (rnd() - 0.5) * 0.2, trunkLen * 0.55, 1, 4);
   // roots: a short anchor node then two spreading levels
   const anchor = addNode(treeX, baseY, treeX, baseY + 4, 0, null, true);
-  for (let i = 0; i < 3; i++) growRoot(anchor, Math.PI / 2 + (i - 1) * 0.8, h * 0.06, 1);
+  for (let i = 0; i < 3; i++) growRoot(anchor, Math.PI / 2 + (i - 1) * 0.8, h * 0.06 * scale, 1);
   let sx = 0, sy = 0;
   for (const n of leafTips) { sx += n.x2; sy += n.y2; }
   canopyCx = sx / leafTips.length; canopyCy = sy / leafTips.length;
@@ -136,9 +137,11 @@ function draw(breath) {
     bg.addColorStop(0, '#071a2e'); bg.addColorStop(0.75, '#153a4a'); bg.addColorStop(1, '#1b3f4f');
     c.fillStyle = bg; c.fillRect(0, 0, w, h);
   }
-  // soil band
-  c.fillStyle = '#2e2117'; c.fillRect(0, soilY, w, h - soilY);
-  c.fillStyle = '#6b4f3a'; c.fillRect(0, soilY, w, 3);
+  // soil band (unless the ground below is drawn by someone else)
+  if (!ctx.noSoil) {
+    c.fillStyle = '#2e2117'; c.fillRect(0, soilY, w, h - soilY);
+    c.fillStyle = '#6b4f3a'; c.fillRect(0, soilY, w, 3);
+  }
   c.drawImage(stat, 0, 0, w, h);
   // canopy: clustered soft circles, tighter on inhale, swaying on exhale
   const tight = 1 - breath.value * 0.14;

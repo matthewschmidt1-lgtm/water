@@ -180,10 +180,13 @@ function step(dt, breath) {
 }
 
 function draw(breath) {
-  // sky
-  const sky = c.createLinearGradient(0, 0, 0, L.surfR);
-  sky.addColorStop(0, '#0b2a44'); sky.addColorStop(1, '#3a6f8a');
-  c.fillStyle = sky; c.fillRect(0, 0, w, L.surfR + 2);
+  // sky (or the sky of whoever is above us)
+  if (ctx.transparentSky) c.clearRect(0, 0, w, L.surfR + 2);
+  else {
+    const sky = c.createLinearGradient(0, 0, 0, L.surfR);
+    sky.addColorStop(0, '#0b2a44'); sky.addColorStop(1, '#3a6f8a');
+    c.fillStyle = sky; c.fillRect(0, 0, w, L.surfR + 2);
+  }
   // ground bands
   c.fillStyle = ground.top;
   c.beginPath(); c.moveTo(0, L.surfL); c.lineTo(w, L.surfR); c.lineTo(w, L.top); c.lineTo(0, L.top); c.closePath(); c.fill();
@@ -223,11 +226,13 @@ function draw(breath) {
   }
 }
 
+export function surfaceFrac(xFrac) { return 0.36 + 0.07 * xFrac; }   // surface height as a fraction of the soil canvas, left high, right low
+
 export default {
   mount(section, context) {
     el = section; ctx = context; c = ctx.c2d; w = ctx.w; h = ctx.h;
     layout(); buildStatic();
-    el.style.background = '#0b2a44';
+    if (!ctx.transparentSky) el.style.background = '#0b2a44';
     el.insertAdjacentHTML('beforeend', `
       <style>
         #soil .chapter-canvas { touch-action: none; cursor: crosshair; -webkit-touch-callout: none; }
@@ -258,7 +263,7 @@ export default {
         </div>
       </div>`);
     hintEl = document.createElement('p'); hintEl.className = 'scene-hint'; hintEl.textContent = 'hold the sky';
-    hintEl.style.left = '50%'; hintEl.style.transform = 'translateX(-50%)'; hintEl.style.top = '22px';
+    hintEl.style.left = '50%'; hintEl.style.transform = 'translateX(-50%)'; hintEl.style.top = (ctx.hintTop != null ? ctx.hintTop : 22) + 'px';
     el.appendChild(hintEl);
     el.querySelectorAll('.chip[data-g]').forEach((b) => b.addEventListener('click', () => {
       ground = GROUNDS[b.dataset.g];
