@@ -6,7 +6,7 @@
 const TAU = Math.PI * 2;
 const NF = 1100, NB = 48, NR = 40, MAXC = 700, ROWS = 12, M = 30, RL = 900;
 
-const X = new Float32Array(NF), Y = new Float32Array(NF);
+const X = new Float32Array(NF), Y = new Float32Array(NF).fill(-1e6);   // every flake starts parked
 const VX = new Float32Array(NF), VY = new Float32Array(NF);   // stir velocities, decay back to zero
 const PH = new Float32Array(NF), FQ = new Float32Array(NF), AM = new Float32Array(NF);
 const SZ = new Float32Array(NF), SP = new Float32Array(NF), TH = new Float32Array(NF);
