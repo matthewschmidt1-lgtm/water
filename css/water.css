@@ -408,7 +408,11 @@ body[data-scene="you"]      { --accent: #ffd6a8; --accent-soft: rgba(255, 214, 1
   .bottom-bar { bottom: calc(14px + env(safe-area-inset-bottom)); }
   .bottom-bar .btn { margin: 0; background: rgba(4, 17, 31, 0.86); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); }
   .hero .scroll-cue { bottom: calc(88px + env(safe-area-inset-bottom)); }
-  .hero h1 { letter-spacing: 0.34em; text-indent: 0.34em; }
+  .hero h1 { letter-spacing: 0.34em; text-indent: 0.34em; font-size: calc(clamp(2.4rem, 8vw, 6rem) * 1.4); }
+  /* The front door reads larger on a phone: every line is 1.4x its desktop-derived size. */
+  .hero p { font-size: calc(clamp(1rem, 2.2vw, 1.25rem) * 1.4); }
+  .hero .breath-hint { font-size: 1.12rem; }
+  .hero .scroll-cue { font-size: 1.05rem; white-space: nowrap; }
 
   /* WHERE IS WATER? and FOLLOW THE WATER: complete, reachable, and small enough to leave the scene visible. */
   footer { padding-bottom: calc(120px + env(safe-area-inset-bottom)); }
