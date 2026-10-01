@@ -237,7 +237,7 @@ if (cycle) {
   const sizeCycle = () => { const r = cv.getBoundingClientRect(); cw = Math.round(r.width); ch = Math.round(r.height); cv.width = cw * dpr; cv.height = ch * dpr; cc.setTransform(dpr, 0, 0, dpr, 0, 0); };
 
   // ---- the melt ----
-  const SEQ_AT = 6.6 + 4;                 // the line has settled; four quiet seconds later it begins
+  const SEQ_AT = 2.4 + 3;                 // WATER begins to appear at 2.4 s; three seconds later it starts to sweat
   let letters = null, sweat = [], splashes = [], drips = [], whale = null, lastSplashT = -1;
   const G = 1500;                         // px/s^2
   function buildLetters() {
