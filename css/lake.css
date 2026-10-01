@@ -1,2 +1,4 @@
 /* The living lake: hero overrides live here. Scoped under .hero so they win over css/water.css. */
 .hero .hero-canvas { touch-action: pan-y; }
+/* press and hold makes a spout: holding must not select the words or raise a callout */
+.hero { user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; }

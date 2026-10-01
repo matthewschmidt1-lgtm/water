@@ -122,6 +122,13 @@ function splash(x, y) {
   }
 }
 
+// ---------- fountain: press and hold, and the lake spouts (cap 320) ----------
+const FN = 320, F_G = 0.0011;
+const fo = [];
+for (let i = 0; i < FN; i++) fo.push({ on: false, x: 0, y: 0, vx: 0, vy: 0, ly: 0 });
+const hold = { on: false, x: 0, y: 0, t0: 0, acc: 0, rip: 0, hiss: 0 };
+let foNext = 0, foLive = 0;
+
 // ---------- rain (cap 300) ----------
 const RAIN = 300;
 const rd = [];
@@ -204,7 +211,7 @@ function updateWeather(t, dt, level) {
 // ---------- state ----------
 const start = performance.now();
 let tVis = 0;
-let dropY = -20, dropV = 0, landed = false, revealed = false, tLanded = 0, tRevealed = 0;
+let dropY = -20, dropV = 0, landed = false, revealed = false, tLanded = 0, tRevealed = 0, tTitle = 0;
 let last = start;
 const waterLine = () => h * 0.62;
 let glass = 0, flowBoost = 0, lastWake = 0, noticed = true, seenMoves = 0, puddleX = 0;
@@ -266,7 +273,7 @@ function drawSweat(dt, level, t) {
   sc.clearRect(0, 0, w, h);
   if (!revealed || fallen) return;
   if (reduced) { fallen = true; hero.classList.add('fallen'); return; }   // no melt: the words stay, the arrow shows
-  const s = t - tRevealed, ds = dt / 1000;
+  const s = t - tTitle, ds = dt / 1000;
   if (s < SWEAT_AT) return;
   if (!falling && (!letters || t - lettersAt > 1.5)) { measureLetters(); lettersAt = t; }
   if (!letters.length) return;
@@ -444,7 +451,7 @@ function frame(now) {
     }
   }
   // The drop first. plip. Then the word rises out of the ripples, then the invitation.
-  if (landed && !revealed) { revealed = true; hero.classList.add('revealed'); hero.classList.add('landed'); }
+  if (landed && !revealed) { revealed = true; tTitle = t; hero.classList.add('revealed'); hero.classList.add('landed'); }
 
   // The puddle spreads from where the drop landed, and begins to flow toward the right edge.
   if (landed && !reduced) {
@@ -517,6 +524,39 @@ function frame(now) {
     }
   }
   c.globalAlpha = 1;
+
+  // The spout: hold the water down and pressure builds. A column climbs, plumes at the top, and rains back in.
+  if (!reduced && (hold.on || foLive > 0)) {
+    const ms = dt;
+    if (hold.on && t - hold.t0 > 0.22) {
+      const pow = smooth((t - hold.t0 - 0.22) / 1.6);
+      const by = clamp(hold.y, level, h - 4);
+      const reach = Math.min(by - 30, h * (0.16 + 0.36 * pow));            // how high the column climbs
+      const v0 = Math.sqrt(2 * F_G * Math.max(40, reach));
+      hold.acc += (50 + 150 * pow) * ms / 1000;
+      while (hold.acc >= 1) {
+        hold.acc -= 1;
+        let d = null;
+        for (let k = 0; k < FN; k++) { const q = fo[(foNext + k) % FN]; if (!q.on) { d = q; foNext = (foNext + k + 1) % FN; break; } }
+        if (!d) break;
+        const lean = (rnd() + rnd() - 1) * 0.13, v = v0 * (0.7 + rnd() * 0.3);
+        d.on = true; d.x = hold.x + (rnd() - 0.5) * 5; d.y = by; d.ly = Math.max(level, by + (rnd() - 0.4) * 16);
+        d.vx = v * Math.sin(lean); d.vy = -v * Math.cos(lean);
+      }
+      if (t - hold.rip > 0.38) { hold.rip = t; addRipple(hold.x, by, 0, 60 + 50 * pow, 2.2, 0.42, 1.3, true); }
+      if (t - hold.hiss > 1.0) { hold.hiss = t; audio.pour(1.2); }
+    }
+    foLive = 0;
+    c.strokeStyle = '#bff6ff'; c.lineCap = 'round'; c.lineWidth = 2.1; c.globalAlpha = 0.8; c.beginPath();
+    for (let i = 0; i < FN; i++) {
+      const d = fo[i]; if (!d.on) continue;
+      d.vy += F_G * ms; d.vx *= 1 - 0.0004 * ms; d.x += d.vx * ms; d.y += d.vy * ms;
+      if (d.vy > 0 && d.y >= d.ly) { d.on = false; if (rnd() < 0.3) addRipple(d.x, d.ly, 0, 26, 1.0, 0.36, 1, true); continue; }
+      foLive++;
+      c.moveTo(d.x, d.y); c.lineTo(d.x - d.vx * 16, d.y - d.vy * 16);
+    }
+    c.stroke(); c.globalAlpha = 1; c.lineCap = 'butt';
+  }
 
   // Splash droplets: arc up, fall back, leave a tiny ring.
   if (!reduced) {
@@ -592,4 +632,38 @@ hero.addEventListener('pointerdown', (e) => {
   addRipple(e.clientX - r.left, y);
   if (!reduced) splash(e.clientX - r.left, y);
   audio.plip(0.9 + Math.random() * 0.4);
+  hold.on = true; hold.x = e.clientX - r.left; hold.y = e.clientY - r.top; hold.t0 = tVis; hold.acc = 0; hold.rip = tVis; hold.hiss = tVis - 0.6;
 });
+hero.addEventListener('pointermove', (e) => {
+  if (!hold.on) return;
+  const r = hero.getBoundingClientRect();
+  hold.x = e.clientX - r.left; hold.y = e.clientY - r.top;
+});
+const letGo = () => { hold.on = false; };
+addEventListener('pointerup', letGo);
+addEventListener('pointercancel', letGo);
+addEventListener('blur', letGo);
+
+// Back at the top after being away: the words return, and melt into the lake again.
+let away = false;
+function replayTitle() {
+  if (!fallen || reduced) return;   // still playing, or (reduced motion) the words never left
+  const line = copyEl.querySelector('p');
+  copyEl.style.transition = 'none'; if (line) line.style.transition = 'none';
+  hero.classList.remove('revealed', 'fallen');
+  copyEl.style.visibility = '';
+  void copyEl.offsetWidth;
+  copyEl.style.transition = ''; if (line) line.style.transition = '';
+  falling = false; fallen = false; letters = null; sweatAcc = 0; lastSplash = -1;
+  for (let i = 0; i < BEADS; i++) beads[i].on = false;
+  for (let i = 0; i < DRIPS; i++) hdrips[i].on = false;
+  tTitle = tVis;
+  hero.classList.add('revealed');
+  const level = waterLine() + (0.5 - breath.value) * 22;
+  addRipple(w / 2, level); addRipple(w / 2, level, 0.26);
+  audio.plip(1);
+}
+addEventListener('scroll', () => {
+  if (scrollY > h * 0.5) away = true;
+  else if (away && scrollY < 24) { away = false; replayTitle(); }
+}, { passive: true });

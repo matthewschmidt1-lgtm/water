@@ -1,14 +1,17 @@
 // Rain. Procedural rain over a dark-blue sky, landing in a puddle band.
-// Four weathers. Storm brings gusts and lightning. The breath eases and hurries the rain.
+// Five weathers. Storm brings gusts and lightning. The Gully Gusher throws rain every which way.
+// The breath eases and hurries the rain.
 
-const MAX = 400, MAX_RINGS = 40;
+const MAX = 760, MAX_RINGS = 90;
 const MODES = {
   drizzle:  { n: 40,  speed: 0.34, len: 7,  wind: 0.05, width: 1.0, alpha: 0.42, gust: false },
   rain:     { n: 140, speed: 0.68, len: 14, wind: 0.14, width: 1.2, alpha: 0.5,  gust: false },
   downpour: { n: 300, speed: 0.98, len: 22, wind: 0.28, width: 1.4, alpha: 0.55, gust: false },
-  storm:    { n: 400, speed: 1.22, len: 28, wind: 0.5,  width: 1.5, alpha: 0.6,  gust: true },
+  storm:    { n: 520, speed: 1.75, len: 32, wind: 0.62, width: 1.6, alpha: 0.62, gust: true, ring: 0.2, flashMin: 2800, flashVar: 3600 },
+  // chaos: the wind swings both ways and every drop is shoved about by its own eddy
+  gusher:   { n: 760, speed: 2.25, len: 36, wind: 0.1,  width: 1.8, alpha: 0.66, gust: true, ring: 0.26, flashMin: 1400, flashVar: 2600, chaos: 1 },
 };
-const LABELS = { drizzle: 'Drizzle', rain: 'Rain', downpour: 'Downpour', storm: 'Storm' };
+const LABELS = { drizzle: 'Drizzle', rain: 'Rain', downpour: 'Downpour', storm: 'Storm', gusher: 'Gully Gusher' };
 
 const X = new Float32Array(MAX), Y = new Float32Array(MAX), S = new Float32Array(MAX), L = new Float32Array(MAX);
 const RX = new Float32Array(MAX_RINGS), RY = new Float32Array(MAX_RINGS), RT = new Float32Array(MAX_RINGS), RS = new Float32Array(MAX_RINGS);
@@ -108,10 +111,14 @@ export default {
     // Wind: base + slow sway, plus gusts in a storm. Inhale eases it.
     let gust = Math.sin(t * 0.0005) * 0.04;
     if (mode.gust) gust += Math.max(0, Math.sin(t * 0.0007) * 0.3 + Math.sin(t * 0.0023) * 0.12);
+    const chaos = mode.chaos || 0;
+    if (chaos) gust = Math.sin(t * 0.0013) * 0.95 + Math.sin(t * 0.0037 + 1.3) * 0.45;   // whole sheets swing left, then right
     const windTarget = (mode.wind + gust) * (1 - 0.35 * b);
-    wind += (windTarget - wind) * Math.min(1, dt * 0.002);
+    wind += (windTarget - wind) * Math.min(1, dt * (chaos ? 0.004 : 0.002));
     const speedMul = (reduced ? 0.4 : 1) * (1.06 - 0.16 * b);
-    dens += (mode.n - dens) * Math.min(1, dt * 0.0008);
+    // a narrow screen cannot hold a wide screen's worth of streaks: the heaviest weathers thin out there
+    const want = mode.n <= 300 ? mode.n : 300 + (mode.n - 300) * Math.max(0.25, Math.min(1, (w - 375) / 600));
+    dens += (want - dens) * Math.min(1, dt * 0.0008);
     const len = mode.len;
 
     // Rain: one path, one stroke. Streaks beyond the current density are parked until they are wanted,
@@ -126,11 +133,13 @@ export default {
         Y[i] = -len * L[i] - Math.random() * h * 0.45; X[i] = Math.random() * w - wind * h;
       }
       const sp = mode.speed * S[i] * speedMul;
+      // in a gusher each drop also rides its own eddy, so neighbours cross each other
+      const wi = chaos ? wind + chaos * 0.55 * Math.sin(t * 0.0045 + i * 1.7 + Y[i] * 0.007) : wind;
       Y[i] += sp * dt;
-      X[i] += wind * sp * dt * (1.35 - 0.4 * S[i]);      // small drops have little inertia and follow the air
+      X[i] += wi * sp * dt * (1.35 - 0.4 * S[i]);      // small drops have little inertia and follow the air
       const land = puddleY + (i % 7) * 3;
       if (Y[i] > land) {
-        if (Math.random() < 0.14) ring(((X[i] % w) + w) % w, land + Math.random() * 6, 0.35 + 0.65 * DD[i] / 1.6);
+        if (Math.random() < (mode.ring || 0.14)) ring(((X[i] % w) + w) % w, land + Math.random() * 6, 0.35 + 0.65 * DD[i] / 1.6);
         if (i >= dens) { Y[i] = -1e6; continue; }
         Y[i] = -len * L[i] - Math.random() * 60;
         X[i] = Math.random() * w - wind * h;
@@ -138,9 +147,15 @@ export default {
       const x = ((X[i] % w) + w) % w;
       const l = len * L[i] * S[i];
       c.moveTo(x, Y[i]);
-      c.lineTo(x - wind * l, Y[i] - l);
+      c.lineTo(x - wi * l, Y[i] - l);
     }
     c.stroke();
+
+    // A gusher hits so hard the puddle throws up a haze of spray.
+    if (chaos && dens > 300) {
+      c.fillStyle = `rgba(190,225,240,${0.10 * Math.min(1, (dens - 300) / 100)})`;
+      c.fillRect(0, puddleY - 14, w, 40);
+    }
 
     // Ripples on the puddle.
     for (let k = 0; k < ringCount; k++) {
@@ -159,10 +174,10 @@ export default {
       }
     }
 
-    // Lightning: storm only, every 4–9 s, a short white breath over everything.
+    // Lightning: storm and gusher only, a short white breath over everything. The gusher flashes far more often.
     if (mode.gust && !reduced) {
       nextFlash -= dt;
-      if (nextFlash <= 0) { flash = 1; nextFlash = 4000 + Math.random() * 5000; }
+      if (nextFlash <= 0) { flash = 1; nextFlash = mode.flashMin + Math.random() * mode.flashVar; }
     }
     if (flash > 0.01) {
       c.fillStyle = `rgba(236,246,255,${flash * 0.22})`;
