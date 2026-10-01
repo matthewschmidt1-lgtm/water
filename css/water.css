@@ -102,13 +102,13 @@ button { font: inherit; }
 #cycle.is-visible .line:nth-of-type(2) { opacity: 0.85; transition-delay: 12s; }
 #cycle.is-visible .line:nth-of-type(3) { opacity: 0.85; transition-delay: 18s; }
 #cycle .cycle-word {
-  position: absolute; bottom: 20%; left: 0; right: 0; text-align: center; margin: 0;
+  position: absolute; bottom: 47%; left: 0; right: 0; text-align: center; margin: 0;
   font-family: var(--serif); letter-spacing: 0.42em; text-indent: 0.42em; font-size: clamp(2rem, 6vw, 4rem);
   opacity: 0; transform: scale(calc(1 + var(--breath) * 0.03)); transition: opacity 2.2s ease 2.4s;
 }
 #cycle.is-visible .cycle-word { opacity: 1; }
 #cycle .cycle-last {
-  position: absolute; bottom: 12%; left: 16px; right: 16px; text-align: center; margin: 0;
+  position: absolute; bottom: 39%; left: 16px; right: 16px; text-align: center; margin: 0;
   font-family: var(--serif); font-style: italic; color: var(--muted); font-size: clamp(1rem, 2.2vw, 1.2rem);
   opacity: 0; transition: opacity 2.2s ease 4.4s;
 }

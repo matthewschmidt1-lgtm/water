@@ -226,26 +226,102 @@ function checkEntered() {
 addEventListener('scroll', checkEntered, { passive: true });
 checkEntered();
 
-// The ending: a single drop, silence, breath. Then the word.
+// The ending: a single drop, silence, breath. Then the word. Then the word itself becomes water:
+// it sweats, the letters let go one by one and fall into the sea, and something large rises to look.
 const cycle = document.getElementById('cycle');
 if (cycle) {
   const cv = document.getElementById('cycle-canvas');
   const cc = cv.getContext('2d');
+  const wordEl = cycle.querySelector('.cycle-word'), lastEl = cycle.querySelector('.cycle-last');
   let started = false, t0 = 0, cw = 0, ch = 0, landed = false, rings = [];
   const sizeCycle = () => { const r = cv.getBoundingClientRect(); cw = Math.round(r.width); ch = Math.round(r.height); cv.width = cw * dpr; cv.height = ch * dpr; cc.setTransform(dpr, 0, 0, dpr, 0, 0); };
+
+  // ---- the melt ----
+  const SEQ_AT = 6.6 + 4;                 // the line has settled; four quiet seconds later it begins
+  let letters = null, sweat = [], splashes = [], drips = [], whale = null, lastSplashT = -1;
+  const G = 1500;                         // px/s^2
+  function buildLetters() {
+    letters = [];
+    const sec = cycle.getBoundingClientRect();
+    const take = (el, big) => {
+      const cs = getComputedStyle(el), r = el.getBoundingClientRect();
+      const font = `${cs.fontStyle} ${cs.fontWeight} ${cs.fontSize} ${cs.fontFamily}`;
+      const spacing = parseFloat(cs.letterSpacing) || 0;
+      const text = el.textContent;
+      cc.font = font;
+      const widths = [...text].map((chr) => cc.measureText(chr).width);
+      const total = widths.reduce((a, b) => a + b, 0) + spacing * (text.length - 1);
+      let x = r.left - sec.left + (r.width - total) / 2;
+      const y = r.top - sec.top + parseFloat(cs.fontSize) * 0.8;   // baseline
+      [...text].forEach((chr, i) => {
+        if (chr !== ' ') letters.push({ chr, x, y, w: widths[i], size: parseFloat(cs.fontSize), font, big, vy: 0, vx: 0, rot: 0, vr: 0, state: 0, t: 0, color: big ? 'rgba(244,249,251,1)' : 'rgba(244,249,251,0.62)' });
+        x += widths[i] + spacing;
+      });
+    };
+    take(wordEl, true); take(lastEl, false);
+    wordEl.style.visibility = 'hidden'; lastEl.style.visibility = 'hidden';
+    const bigs = letters.filter((l) => l.big), smalls = letters.filter((l) => !l.big);
+    bigs.forEach((l, i) => { l.release = 2.6 + i * 0.55; });
+    smalls.forEach((l, i) => { l.release = 2.6 + bigs.length * 0.55 + 0.6 + i * 0.045; });
+  }
+  function splash(x, level, big, t) {
+    splashes.push({ x, t, big });
+    const n = big ? 7 : 3;
+    for (let i = 0; i < n; i++) drips.push({ x: x + (Math.random() - 0.5) * (big ? 30 : 10), y: level, vx: (Math.random() - 0.5) * (big ? 160 : 60), vy: -(big ? 220 : 110) * (0.5 + Math.random()), r: big ? 2.2 : 1.3, splashed: true });
+    audio.plip(big ? 0.7 + Math.random() * 0.3 : 1.4 + Math.random() * 0.4);
+    lastSplashT = t;
+  }
+
   const frame = (now) => {
     if (!started) return;
     const t = (now - t0) / 1000;
+    const dt = Math.min(0.05, (now - (frame.last || now)) / 1000); frame.last = now;
     cc.clearRect(0, 0, cw, ch);
     const level = ch * 0.68 + (0.5 - breath.value) * 6;
-    // the still water
+    const surf = (x) => level + Math.sin(x * 0.02 + t * 0.6) * 1.2;
+
+    // ---- the whale: a fluke rising to look, dripping, then sliding back under ----
+    if (whale) {
+      const u = (t - whale.t0);
+      let lift = 0; // 0 under .. 1 fully up
+      if (u < 1.6) lift = 1 - Math.pow(1 - u / 1.6, 3);
+      else if (u < 3.8) lift = 1;
+      else if (u < 5.4) lift = 1 - (u - 3.8) / 1.6;
+      else whale = null;
+      if (whale) {
+        const hgt = ch * 0.26, wx = whale.x, baseY = level + 8, top = baseY - hgt * lift;
+        const tilt = Math.sin(t * 0.9) * 0.05;
+        cc.save(); cc.translate(wx, baseY); cc.rotate(tilt); cc.translate(-wx, -baseY);
+        // fluke: two lobes with a notch, on a tapering stem
+        cc.fillStyle = '#12334f';
+        cc.strokeStyle = `rgba(127,242,255,${0.55 * lift})`; cc.lineWidth = 1.4;
+        cc.beginPath();
+        cc.moveTo(wx - hgt * 0.14, baseY);
+        cc.bezierCurveTo(wx - hgt * 0.12, baseY - hgt * 0.45 * lift, wx - hgt * 0.1, top + hgt * 0.3, wx - hgt * 0.62, top + hgt * 0.12);
+        cc.bezierCurveTo(wx - hgt * 0.5, top - hgt * 0.02, wx - hgt * 0.18, top - hgt * 0.02, wx, top + hgt * 0.12);
+        cc.bezierCurveTo(wx + hgt * 0.18, top - hgt * 0.02, wx + hgt * 0.5, top - hgt * 0.02, wx + hgt * 0.62, top + hgt * 0.12);
+        cc.bezierCurveTo(wx + hgt * 0.1, top + hgt * 0.3, wx + hgt * 0.12, baseY - hgt * 0.45 * lift, wx + hgt * 0.14, baseY);
+        cc.closePath(); cc.fill(); cc.stroke();
+        // wet sheen along the top edge
+        cc.strokeStyle = `rgba(127,242,255,${0.35 * lift})`; cc.lineWidth = 1.2;
+        cc.beginPath(); cc.moveTo(wx - hgt * 0.55, top + hgt * 0.13); cc.bezierCurveTo(wx - hgt * 0.3, top + hgt * 0.02, wx - hgt * 0.1, top + hgt * 0.04, wx, top + hgt * 0.12); cc.stroke();
+        cc.restore();
+        // water running off the edges while it is up
+        if (lift > 0.6 && Math.random() < 0.5) drips.push({ x: wx + (Math.random() - 0.5) * hgt * 1.1, y: top + hgt * 0.16, vx: (Math.random() - 0.5) * 20, vy: 20 + Math.random() * 40, r: 1.4, splashed: false });
+        if (u > 1.0 && u < 1.05 && !whale.rang) { whale.rang = true; splashes.push({ x: wx, t, big: true }); audio.plip(0.5); }
+        if (u > 5.0 && !whale.rang2) { whale.rang2 = true; splashes.push({ x: wx, t, big: true }); audio.plip(0.6); }
+      }
+    }
+
+    // ---- the still water (drawn after the whale's stem so the body reads as under the surface) ----
     cc.fillStyle = `rgba(47,184,198,${0.22 + breath.value * 0.08})`;
     cc.beginPath(); cc.moveTo(0, ch);
-    for (let x = 0; x <= cw; x += 6) cc.lineTo(x, level + Math.sin(x * 0.02 + t * 0.6) * 1.2);
+    for (let x = 0; x <= cw; x += 6) cc.lineTo(x, surf(x));
     cc.lineTo(cw, ch); cc.closePath(); cc.fill();
     cc.strokeStyle = `rgba(127,242,255,${0.25 + breath.value * 0.3})`; cc.lineWidth = 1;
-    cc.beginPath(); for (let x = 0; x <= cw; x += 6) x ? cc.lineTo(x, level + Math.sin(x * 0.02 + t * 0.6) * 1.2) : cc.moveTo(x, level); cc.stroke();
-    // one drop, once
+    cc.beginPath(); for (let x = 0; x <= cw; x += 6) x ? cc.lineTo(x, surf(x)) : cc.moveTo(x, level); cc.stroke();
+
+    // ---- one drop, once ----
     if (!landed) {
       const fall = Math.max(0, t - 0.6);
       const y = reduced ? level : ch * 0.18 + fall * fall * 260;
@@ -256,6 +332,56 @@ if (cycle) {
     for (let i = rings.length - 1; i >= 0; i--) {
       const k = (t - rings[i]) / 4; if (k > 1) { rings.splice(i, 1); continue; }
       cc.strokeStyle = `rgba(127,242,255,${(1 - k) * 0.6})`; cc.beginPath(); cc.ellipse(cw / 2, level, 8 + k * 120, (8 + k * 120) * 0.24, 0, 0, Math.PI * 2); cc.stroke();
+    }
+
+    // ---- the word becomes water ----
+    if (!reduced && t >= SEQ_AT) {
+      if (!letters) buildLetters();
+      const s = t - SEQ_AT;
+      // sweat: droplets form on the letters, swell, slide, and drip off
+      if (s < 2.6 && Math.random() < dt * 9) {
+        const held = letters.filter((l) => l.state === 0);
+        if (held.length) { const l = held[Math.floor(Math.random() * held.length)]; sweat.push({ l, u: Math.random(), v: 0.2 + Math.random() * 0.6, t: 0, r: 0 }); }
+      }
+      for (let i = sweat.length - 1; i >= 0; i--) {
+        const d = sweat[i]; d.t += dt;
+        if (d.l.state !== 0) { sweat.splice(i, 1); continue; }
+        d.r = Math.min(2.6, d.t * 2.2);
+        const slide = Math.max(0, d.t - 0.9) * 28;
+        const x = d.l.x + d.l.w * d.u, y = d.l.y - d.l.size * 0.72 + d.l.size * 0.72 * d.v + slide;
+        if (y > d.l.y + 6) { drips.push({ x, y, vx: 0, vy: 30, r: d.r * 0.8, splashed: false }); sweat.splice(i, 1); continue; }
+        cc.fillStyle = 'rgba(191,244,255,0.9)'; cc.beginPath(); cc.ellipse(x, y, d.r * 0.8, d.r, 0, 0, Math.PI * 2); cc.fill();
+      }
+      // letters: held, then falling, then gone
+      letters.forEach((l) => {
+        if (l.state === 0 && s >= l.release) { l.state = 1; l.vr = (Math.random() - 0.5) * 2.2; l.vx = (Math.random() - 0.5) * 30; }
+        if (l.state === 1) {
+          l.vy += G * dt; l.y += l.vy * dt; l.x += l.vx * dt; l.rot += l.vr * dt;
+          if (l.y - l.size * 0.3 >= surf(l.x + l.w / 2)) { l.state = 2; splash(l.x + l.w / 2, level, l.big, t); }
+        }
+        if (l.state === 2) return;
+        cc.save(); cc.font = l.font; cc.fillStyle = l.color; cc.textBaseline = 'alphabetic';
+        cc.translate(l.x + l.w / 2, l.y); cc.rotate(l.rot); cc.translate(-(l.x + l.w / 2), -l.y);
+        cc.fillText(l.chr, l.x, l.y); cc.restore();
+      });
+      // the whale comes to look once the last letter has gone under
+      if (!whale && lastSplashT > 0 && letters.every((l) => l.state === 2) && t - lastSplashT > 1.6 && !frame.whaleDone) {
+        whale = { t0: t, x: cw * (0.5 + (Math.random() - 0.5) * 0.3) }; frame.whaleDone = true;
+      }
+    }
+
+    // ---- drips and splash droplets ----
+    for (let i = drips.length - 1; i >= 0; i--) {
+      const d = drips[i]; d.vy += G * 0.55 * dt; d.x += d.vx * dt; d.y += d.vy * dt;
+      if (d.y >= surf(d.x)) { if (!d.splashed) { splashes.push({ x: d.x, t, big: false }); } drips.splice(i, 1); continue; }
+      cc.fillStyle = 'rgba(191,244,255,0.85)'; cc.beginPath(); cc.ellipse(d.x, d.y, d.r * 0.8, d.r * 1.2, 0, 0, Math.PI * 2); cc.fill();
+    }
+    for (let i = splashes.length - 1; i >= 0; i--) {
+      const sp = splashes[i], k = (t - sp.t) / (sp.big ? 2.6 : 1.4); if (k > 1) { splashes.splice(i, 1); continue; }
+      const R = (sp.big ? 10 + 90 * (1 - Math.exp(-k * 3)) : 3 + 26 * (1 - Math.exp(-k * 3)));
+      cc.strokeStyle = `rgba(127,242,255,${(1 - k) * (1 - k) * (sp.big ? 0.7 : 0.5)})`; cc.lineWidth = sp.big ? 1.4 : 1;
+      cc.beginPath(); cc.ellipse(sp.x, level, R, R * 0.26, 0, 0, Math.PI * 2); cc.stroke();
+      if (sp.big && k > 0.15) { cc.strokeStyle = `rgba(127,242,255,${(1 - k) * 0.3})`; cc.beginPath(); cc.ellipse(sp.x, level, R * 0.6, R * 0.16, 0, 0, Math.PI * 2); cc.stroke(); }
     }
     requestAnimationFrame(frame);
   };
@@ -274,7 +400,7 @@ if (cycle) {
   }, { rootMargin: '0px 0px -35% 0px', threshold: Array.from({ length: 21 }, (_, i) => i / 20) });
   endObs.observe(cycle);
   // Keep the canvas matched to its section (rotation, URL bars, late layout).
-  new ResizeObserver(() => { if (started) sizeCycle(); }).observe(cycle);
+  new ResizeObserver(() => { if (started) { sizeCycle(); if (letters) { letters = null; sweat = []; } } }).observe(cycle);
 }
 
 // Closer: Cup, Lab and You fold into one section. One opens at a time.
