@@ -245,7 +245,7 @@ if (cycle) {
   const cv = document.getElementById('cycle-canvas');
   const cc = cv.getContext('2d');
   const wordEl = cycle.querySelector('.cycle-word'), lastEl = cycle.querySelector('.cycle-last');
-  let started = false, t0 = 0, cw = 0, ch = 0, landed = false, rings = [];
+  let started = false, running = false, t0 = 0, cw = 0, ch = 0, landed = false, rings = [];
   const sizeCycle = () => { const r = cv.getBoundingClientRect(); cw = Math.round(r.width); ch = Math.round(r.height); cv.width = cw * dpr; cv.height = ch * dpr; cc.setTransform(dpr, 0, 0, dpr, 0, 0); };
 
   // ---- the melt ----
@@ -285,7 +285,7 @@ if (cycle) {
   }
 
   const frame = (now) => {
-    if (!started) return;
+    if (!started) { running = false; return; }
     const t = (now - t0) / 1000;
     const dt = Math.min(0.05, (now - (frame.last || now)) / 1000); frame.last = now;
     cc.clearRect(0, 0, cw, ch);
@@ -399,16 +399,32 @@ if (cycle) {
     requestAnimationFrame(frame);
   };
   const off = breath.onPhase((p) => { if (started && landed && p === 'exhale') rings.push((performance.now() - t0) / 1000); });
-  // Play once the scene is really on screen: half the section (or half of what the viewport can show of it),
-  // measured against the upper 65% of the screen so the ending never starts while the tiles above it are still being read.
+  // The ending plays every time the visitor scrolls down into it, not once per page load.
+  // clearStage() puts everything back to the dark, empty water; play() runs the scene from the first drop.
+  function clearStage() {
+    landed = false; rings = []; letters = null; sweat = []; splashes = []; drips = []; whale = null; lastSplashT = -1;
+    frame.whaleDone = false; frame.last = 0;
+    wordEl.style.visibility = ''; lastEl.style.visibility = '';
+    wordEl.style.transition = 'none'; lastEl.style.transition = 'none';     // back to invisible at once, not on the fade's delay
+    cycle.classList.remove('is-visible'); void cycle.offsetWidth;
+    wordEl.style.transition = ''; lastEl.style.transition = '';
+    cc.clearRect(0, 0, cw, ch);
+  }
+  function play() {
+    clearStage();
+    sizeCycle(); started = true; t0 = performance.now(); cycle.classList.add('is-visible');
+    if (!running) { running = true; requestAnimationFrame(frame); }
+  }
+  // It starts once the scene is really on screen: half the section (or half of what the viewport can show of it),
+  // measured against the upper 65% of the screen so it never starts while the tiles above it are still being read.
+  // It re-arms once the visitor has scrolled most of it back out of view.
   const endObs = new IntersectionObserver((entries) => {
     entries.forEach((en) => {
-      if (started || !en.isIntersecting || !en.rootBounds) return;
+      if (!en.rootBounds) return;
       const need = Math.min(en.boundingClientRect.height, en.rootBounds.height) * 0.5;
-      if (en.intersectionRect.height < need - 1) return;
-      sizeCycle(); started = true; t0 = performance.now(); cycle.classList.add('is-visible');
-      requestAnimationFrame(frame);
-      endObs.disconnect();
+      const seen = en.isIntersecting ? en.intersectionRect.height : 0;
+      if (!started && seen >= need - 1) play();
+      else if (started && seen < need * 0.3) { started = false; clearStage(); }
     });
   }, { rootMargin: '0px 0px -35% 0px', threshold: Array.from({ length: 21 }, (_, i) => i / 20) });
   endObs.observe(cycle);
