@@ -33,7 +33,7 @@ Browser-pane testing quirks that cost time before:
 - Module caching is sticky. After an edit, force-refetch the changed files with `fetch(url, {cache: 'reload'})`, then navigate to a fresh `/?r=<anything>` URL.
 - The pane often reports `document.hidden = true` and throttles `requestAnimationFrame`, CSS transitions, and IntersectionObserver callbacks. Right after load run `Object.defineProperty(document,'hidden',{get:()=>false,configurable:true})`, and take screenshots between steps to force real frames. Scripted `setTimeout` waits alone will not advance animations.
 - Use `scrollIntoView({behavior:'instant'})` and repeat it once after a pause; chapters mount lazily and shift the page.
-- The interface (menu, sound toggle, bottom buttons) only appears after scrolling past the hero (`body.entered`).
+- The interface (menu, sound toggle) only appears after scrolling past the hero (`body.entered`).
 - `?fast=1` on first load compresses the hero's weather schedule.
 
 There is no test suite and no linter. Check the browser console for errors after every change.
@@ -52,7 +52,7 @@ Commit to `main` and push; Railway redeploys. `package.json` runs `serve -s . -l
    - **Sky** (`grove.js`): one tall landscape (170vh on desktop) that composes three modules on stacked canvases: `cloud.js` (dawn sky, cloud that speaks a line each exhale), `tree.js` (on the left, sap climbing to transpiration), `soil.js` (cutaway ground along the bottom, hold the sky to rain, Sand/Loam/Clay chips).
    - **Lab** (`lab.js`), **Cup** (`cup.js`), **You** (`you.js`).
 6. **Ending** (`#cycle`, logic in `js/main.js`): still water, one drop, WATER, "Enjoy it while it lasts." Then the text sweats, letters fall and splash, and a small angled whale fluke rises and slides under. It replays every time the visitor scrolls down into it.
-7. **Footer**: only "Made by Matty", linking to https://matthew-schmidt-production.up.railway.app/.
+7. **Footer**: the two buttons (Where is water? / Follow the water; they are no longer fixed to the screen), then "Made by Matty", linking to https://matthew-schmidt-production.up.railway.app/.
 
 Global mechanics:
 

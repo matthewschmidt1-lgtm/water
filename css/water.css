@@ -79,7 +79,7 @@ button { font: inherit; }
   opacity: calc(0.35 + var(--breath) * 0.65);
 }
 .hero .scroll-cue {
-  position: absolute; bottom: 84px; left: 50%; transform: translateX(-50%);
+  position: absolute; bottom: 44px; left: 50%; transform: translateX(-50%);
   color: var(--mist); font-size: 2.1rem; line-height: 1;
   opacity: 0; transition: opacity 2s ease;
 }
@@ -299,12 +299,8 @@ body:not(.entered) #drop-nav, body:not(.entered) .top-right, body:not(.entered) 
 }
 .ghost:hover, .ghost[aria-pressed="true"] { color: var(--accent); border-color: var(--accent-soft); }
 
-.bottom-bar {
-  position: fixed; bottom: 18px; left: 50%; transform: translateX(-50%);
-  z-index: 50; display: flex; gap: 10px; white-space: nowrap;
-  transition: transform 0.35s ease, opacity 0.35s ease;
-}
-.bottom-bar.away { transform: translate(-50%, 90px); opacity: 0; pointer-events: none; }
+/* The two doors sit at the very end of the page, above the signature. They do not follow the reader. */
+.bottom-bar { display: flex; justify-content: center; flex-wrap: wrap; gap: 10px; margin: 0 0 26px; white-space: nowrap; }
 
 /* FOLLOW THE WATER: one drop leads the page. No panel, just the drop, a word, and a quiet way out. */
 /* The drop has the stage: the usual buttons step aside while it travels. */
@@ -312,7 +308,7 @@ body.following .bottom-bar { opacity: 0 !important; pointer-events: none !import
 
 /* Footer */
 footer {
-  padding: 18px 16px 84px; text-align: center; color: var(--muted);   /* the bottom room only clears the two fixed buttons */
+  padding: 26px 16px 30px; text-align: center; color: var(--muted);
   background: linear-gradient(var(--deep), #000);
   font-family: var(--serif);
 }
@@ -370,7 +366,7 @@ body[data-scene="you"]      { --accent: #ffd6a8; --accent-soft: rgba(255, 214, 1
   }
   section.chapter .chapter-body, section.chapter .chapter-body.bottom,
   section.chapter .chapter-body.left, section.chapter .chapter-body.right {
-    margin: var(--scene-h, 62vh) 0 0; padding: 8px max(16px, env(safe-area-inset-right)) calc(150px + env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left)); max-width: none; z-index: 2;
+    margin: var(--scene-h, 62vh) 0 0; padding: 8px max(16px, env(safe-area-inset-right)) calc(72px + env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left)); max-width: none; z-index: 2;
     text-shadow: none;
   }
   .chapter h2 { font-size: clamp(1.8rem, 8vw, 2.4rem); text-wrap: balance; }
@@ -410,9 +406,8 @@ body[data-scene="you"]      { --accent: #ffd6a8; --accent-soft: rgba(255, 214, 1
   .top-right .ghost { min-width: 44px; display: inline-flex; align-items: center; justify-content: center; }
 
   /* The bottom bar sits on its own ground so text never shows through it. */
-  .bottom-bar { bottom: calc(14px + env(safe-area-inset-bottom)); }
   .bottom-bar .btn { margin: 0; background: rgba(4, 17, 31, 0.86); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); }
-  .hero .scroll-cue { bottom: calc(88px + env(safe-area-inset-bottom)); }
+  .hero .scroll-cue { bottom: calc(48px + env(safe-area-inset-bottom)); }
   .hero h1 { letter-spacing: 0.34em; text-indent: 0.34em; font-size: calc(clamp(2.4rem, 8vw, 6rem) * 1.4); }
   /* The front door reads larger on a phone: every line is 1.4x its desktop-derived size. */
   .hero p { font-size: clamp(1.55rem, 6.6vw, 2rem); }
@@ -420,7 +415,7 @@ body[data-scene="you"]      { --accent: #ffd6a8; --accent-soft: rgba(255, 214, 1
   .hero .scroll-cue { font-size: 2.5rem; }
 
   /* WHERE IS WATER? and FOLLOW THE WATER: complete, reachable, and small enough to leave the scene visible. */
-  footer { padding-bottom: calc(84px + env(safe-area-inset-bottom)); }
+  footer { padding-bottom: calc(30px + env(safe-area-inset-bottom)); }
 }
 @media (max-width: 600px) {
   .chapter-body.left, .chapter-body.right { margin-left: 0; margin-right: 0; }

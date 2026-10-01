@@ -4,7 +4,7 @@
 // Interface: layout(w, h, puddleY), draw(c, dt, t, b, amount), pointer(x, y, down), reduced, residual.
 
 const TAU = Math.PI * 2;
-const NF = 1100, NB = 48, NR = 40, MAXC = 700, ROWS = 12, M = 30, RL = 900;
+const NF = 1450, NB = 48, NR = 40, MAXC = 700, ROWS = 12, M = 30, RL = 900;
 
 const X = new Float32Array(NF), Y = new Float32Array(NF).fill(-1e6);   // every flake starts parked
 const VX = new Float32Array(NF), VY = new Float32Array(NF);   // stir velocities, decay back to zero
@@ -148,10 +148,10 @@ const snow = {
     if (!sprites) buildSprites();
     const px = ow ? nw / ow : 1, py2 = oh ? nh / oh : 1;
     w = nw; h = nh; puddleY = py; ph = Math.max(1, h - puddleY);
-    N = Math.max(360, Math.min(1000, Math.round(360 + (w - 375) / 1225 * 640)));
-    nN = Math.min(60, Math.round(24 + (N - 360) / 640 * 36));
+    N = Math.max(600, Math.min(1300, Math.round(600 + (w - 375) / 1225 * 700)));
+    nN = Math.min(75, Math.round(34 + (N - 600) / 700 * 41));
     nM = Math.round((N - nN) * 0.36); nF = N - nN - nM;
-    depK = (w / N) / 2.1;
+    depK = (w / N) / 2.1 / 1.8;
     const oc = nC, ocw = cw, old = oc ? BANK.slice(0, oc) : null;
     cw = Math.max(6, w / (MAXC - 3)); nC = Math.ceil(w / cw) + 1;
     maxH = 7 + h * 0.022;
@@ -226,11 +226,11 @@ const snow = {
     }
 
     const hs = Math.max(0.8, Math.min(1.4, h / 600));
-    const vmul = (1 - 0.9 * b) * (rd ? 0.4 : 1) * hs, flut = rd ? 0.15 : 1;
+    const vmul = 1.8 * (1 - 0.5 * b) * (rd ? 0.4 : 1) * hs, flut = rd ? 0.15 : 1;
     const ft = t * 0.001;
-    const wt = 0.012 * Math.tanh(2.4 * Math.sin(t * 0.00008 + 0.6)) + 0.004 * Math.sin(t * 0.00071);
-    windV += (wt - windV) * Math.min(1, dt * 0.0006);
-    const wv = windV * (1 - 0.6 * b) * (rd ? 0.5 : 1);
+    const wt = 0.026 * Math.tanh(2.4 * Math.sin(t * 0.00011 + 0.6)) + 0.011 * Math.sin(t * 0.00093) + 0.006 * Math.sin(t * 0.0021 + 1.3);
+    windV += (wt - windV) * Math.min(1, dt * 0.0009);
+    const wv = windV * (1 - 0.4 * b) * (rd ? 0.5 : 1);
     const dec = Math.exp(-dt / 850);
 
     if (a > 0.2) cold = Math.min(1, cold + dt * a / 22000); else cold = Math.max(0, cold - dt / 9000);
@@ -246,7 +246,7 @@ const snow = {
       }
       const ly = LAY[i], f1 = ft * FQ[i] + PH[i];
       const sx = Math.sin(f1) + 0.55 * Math.sin(ft * FQ[i] * 0.43 + PH[i] * 1.7);
-      X[i] += (wv * WM[ly] + sx * AM[i] * flut + VX[i]) * dt;
+      X[i] += (wv * WM[ly] + sx * AM[i] * 1.5 * flut + VX[i]) * dt;
       Y[i] += (SP[i] * vmul * (1 + 0.26 * flut * Math.sin(f1 * 1.3)) + VY[i]) * dt;
       VX[i] *= dec; VY[i] *= dec; AGE[i] += dt;
       if (X[i] < -M) X[i] += w + 2 * M; else if (X[i] > w + M) X[i] -= w + 2 * M;
@@ -255,7 +255,7 @@ const snow = {
         const x = X[i];
         if (x >= 0 && x <= w) {
           if (cold > 0.06 && Math.random() < cold * 0.95 * (ly === 2 ? 0.5 : 1)) deposit(x, (ly === 0 ? 0.4 : ly === 1 ? 0.8 : 1.6) * depK);
-          else if (Math.random() < (ly > 0 ? 0.5 : 0.125)) ring(x, land, ly === 0 ? 0.3 : ly === 1 ? 0.6 : 1);
+          else if (Math.random() < (ly > 0 ? 0.21 : 0.055)) ring(x, land, ly === 0 ? 0.3 : ly === 1 ? 0.6 : 1);
         }
         if (TH[i] < a) spawn(i); else Y[i] = -1e6;
         if (Y[i] > -1e5 && front >= h) Y[i] = -(ly === 2 ? SZ[i] : 4) - Math.random() * 40;

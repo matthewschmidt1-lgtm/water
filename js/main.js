@@ -202,24 +202,8 @@ soundBtn.addEventListener('click', () => {
 mountWhere({ narrow, reduced });
 mountJourney({ narrow, reduced, getSceneH: () => sceneH });
 
-// Bottom bar steps aside while the reader scrolls down, and returns on scroll-up or after a pause.
-const bar = document.querySelector('.bottom-bar');
-let lastY = scrollY, barTimer = null, upAcc = 0, barQuietUntil = 0;
-// Scrolls the page makes for itself (opening or closing a closer tile) must not toggle the bar.
-const quietBar = (ms = 1400) => { barQuietUntil = performance.now() + ms; };
-addEventListener('scroll', () => {
-  const y = scrollY;
-  const dy = y - lastY;
-  lastY = y;
-  if (performance.now() < barQuietUntil) { upAcc = 0; return; }
-  if (dy > 0) upAcc = 0; else upAcc -= dy;
-  if (dy > 4 && y > 80) bar.classList.add('away');
-  // A deliberate scroll-up brings it back (a jittery thumb does not).
-  else if (dy < 0 && upAcc > (narrow.matches ? 90 : 4)) bar.classList.remove('away');
-  clearTimeout(barTimer);
-  // On phones the bar does not creep back over the copy on its own: it returns on scroll-up, or at the very top.
-  barTimer = setTimeout(() => { if (!narrow.matches || scrollY <= 80) bar.classList.remove('away'); }, 1100);
-}, { passive: true });
+// The two doors now sit in the footer; nothing to hide or show while scrolling.
+const quietBar = () => {};
 
 // Breath hint text under the hero
 const hint = document.getElementById('breath-word');
