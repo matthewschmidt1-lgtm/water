@@ -50,6 +50,7 @@ button { font: inherit; }
   position: relative;
   text-align: center;
   padding: 0 16px;
+  margin-bottom: 20vh;
   opacity: 0;
   transform: translateY(12px);
   transition: opacity 2.6s ease 0.5s, transform 2.6s ease 0.5s;
@@ -65,7 +66,7 @@ button { font: inherit; }
   transform: scale(calc(1 + var(--breath) * 0.035));
   transition: transform 0.2s linear;
 }
-.hero p { color: var(--muted); font-size: clamp(1rem, 2.2vw, 1.25rem); margin: 0.6em 0 0; font-style: italic; font-family: var(--serif); }
+.hero p { color: rgba(244, 249, 251, 0.94); font-size: clamp(1.35rem, 2.9vw, 1.9rem); margin: 0.55em 0 0; font-style: italic; font-family: var(--serif); text-shadow: 0 1px 14px rgba(4, 17, 31, 0.8); }
 .hero .breath-hint {
   margin-top: 2.5rem;
   font-size: 0.8rem;
@@ -410,7 +411,7 @@ body[data-scene="you"]      { --accent: #ffd6a8; --accent-soft: rgba(255, 214, 1
   .hero .scroll-cue { bottom: calc(88px + env(safe-area-inset-bottom)); }
   .hero h1 { letter-spacing: 0.34em; text-indent: 0.34em; font-size: calc(clamp(2.4rem, 8vw, 6rem) * 1.4); }
   /* The front door reads larger on a phone: every line is 1.4x its desktop-derived size. */
-  .hero p { font-size: calc(clamp(1rem, 2.2vw, 1.25rem) * 1.4); }
+  .hero p { font-size: clamp(1.55rem, 6.6vw, 2rem); }
   .hero .breath-hint { font-size: 1.12rem; }
   .hero .scroll-cue { font-size: 2.5rem; }
 
