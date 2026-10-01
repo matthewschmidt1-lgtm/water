@@ -219,6 +219,122 @@ function drawDrop(x, y, r) {
   c.fillStyle = g; c.fill();
 }
 
+// ---- The title becomes water (the same melt as the ending): three seconds after it appears it starts to sweat,
+// then every letter lets go and falls into the lake. When the last one has gone under, the arrow appears. ----
+const sweatCv = document.createElement('canvas');
+sweatCv.className = 'hero-sweat';
+sweatCv.style.cssText = 'position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:2';
+hero.appendChild(sweatCv);
+const sc = sweatCv.getContext('2d');
+const copyEl = hero.querySelector('.hero-copy');
+const SWEAT_AT = 4, FALL_AT = 7, FALL_G = 1500;   // seconds after the title starts to appear (it takes about 3 s to fade in)
+let sw = 0, sh2 = 0, letters = null, lettersAt = 0, sweatAcc = 0, falling = false, fallen = false, lastSplash = -1;
+const BEADS = 44, DRIPS = 36;
+const beads = Array.from({ length: BEADS }, () => ({ on: false, l: null, u: 0, v: 0, t: 0 }));
+const hdrips = Array.from({ length: DRIPS }, () => ({ on: false, x: 0, y: 0, vy: 0, r: 1 }));
+function measureLetters() {
+  // every letter's real box and face, from the DOM, so the beads sit on the type and the fall starts exactly where it was
+  const base = hero.getBoundingClientRect(); letters = [];
+  const take = (el, kind) => {
+    if (!el) return;
+    let node = el.firstChild; while (node && node.nodeType !== 3) node = node.firstChild;
+    if (!node) return;
+    const cs = getComputedStyle(el), fs = parseFloat(cs.fontSize), text = node.textContent, range = document.createRange();
+    const font = `${cs.fontStyle} ${cs.fontWeight} ${fs}px ${cs.fontFamily}`;
+    const upper = cs.textTransform === 'uppercase';
+    const alpha = parseFloat(getComputedStyle(el.closest('.breath-hint') || el).opacity) || 1;
+    for (let i = 0; i < text.length; i++) {
+      if (text[i] === ' ') continue;
+      range.setStart(node, i); range.setEnd(node, i + 1);
+      const r = range.getBoundingClientRect();
+      if (r.width <= 0) continue;
+      letters.push({ chr: upper ? text[i].toUpperCase() : text[i], x: r.left - base.left, top: r.top - base.top, w: r.width, h: r.height,
+        y: r.top - base.top + r.height * 0.5 + fs * 0.32, font, color: cs.color, alpha, kind, big: kind === 0,
+        vy: 0, vx: 0, rot: 0, vr: 0, state: 0, release: 0 });
+    }
+  };
+  take(hero.querySelector('.hero-copy h1'), 0);
+  take(hero.querySelector('.hero-copy p'), 1);
+  take(hero.querySelector('#breath-word'), 2);
+  const a = letters.filter((l) => l.kind === 0), b = letters.filter((l) => l.kind === 1), d = letters.filter((l) => l.kind === 2);
+  a.forEach((l, i) => { l.release = i * 0.5; });
+  b.forEach((l, i) => { l.release = a.length * 0.5 + 0.5 + i * 0.045; });
+  d.forEach((l, i) => { l.release = a.length * 0.5 + 0.5 + b.length * 0.045 + 0.4 + i * 0.07; });
+}
+function drawSweat(dt, level, t) {
+  if (sw !== w || sh2 !== h) { sw = w; sh2 = h; sweatCv.width = w * dpr; sweatCv.height = h * dpr; sc.setTransform(dpr, 0, 0, dpr, 0, 0); if (!falling) letters = null; }
+  sc.clearRect(0, 0, w, h);
+  if (!revealed || fallen) return;
+  if (reduced) { fallen = true; hero.classList.add('fallen'); return; }   // no melt: the words stay, the arrow shows
+  const s = t - tRevealed, ds = dt / 1000;
+  if (s < SWEAT_AT) return;
+  if (!falling && (!letters || t - lettersAt > 1.5)) { measureLetters(); lettersAt = t; }
+  if (!letters.length) return;
+
+  // the fall begins: the type is redrawn here, in place, and the page's own copy steps out
+  if (!falling && s >= FALL_AT) { measureLetters(); falling = true; copyEl.style.visibility = 'hidden'; for (let i = 0; i < BEADS; i++) beads[i].on = false; }
+
+  // sweat: a new bead now and then on a letter that is still holding on
+  sweatAcc += dt;
+  if (sweatAcc > 240) {
+    sweatAcc = 0;
+    const held = letters.filter((l) => l.state === 0);
+    if (held.length) for (let i = 0; i < BEADS; i++) if (!beads[i].on) {
+      const b = beads[i]; b.on = true; b.l = held[Math.floor(Math.random() * held.length)]; b.u = 0.12 + Math.random() * 0.76; b.v = 0.25 + Math.random() * 0.45; b.t = 0;
+      break;
+    }
+  }
+  sc.fillStyle = 'rgba(191,244,255,0.9)';
+  for (let i = 0; i < BEADS; i++) {
+    const b = beads[i]; if (!b.on) continue;
+    const g = b.l; if (!g || g.state !== 0) { b.on = false; continue; }
+    b.t += ds;
+    const r = Math.min(g.big ? 3.2 : 1.9, b.t * 2.4), slide = Math.max(0, b.t - 1.1) * 26;
+    const x = g.x + g.w * b.u, y = g.top + g.h * b.v + slide;
+    if (y > g.top + g.h * 0.9) {                      // it lets go
+      b.on = false;
+      for (let k = 0; k < DRIPS; k++) if (!hdrips[k].on) { const d = hdrips[k]; d.on = true; d.x = x; d.y = y; d.vy = 0.03; d.r = r * 0.8; break; }
+      continue;
+    }
+    sc.beginPath(); sc.ellipse(x, y, r * 0.8, r, 0, 0, Math.PI * 2); sc.fill();
+  }
+  for (let k = 0; k < DRIPS; k++) {
+    const d = hdrips[k]; if (!d.on) continue;
+    d.vy += 0.0009 * dt; d.y += d.vy * dt;
+    if (d.y >= level) { d.on = false; addRipple(d.x, level, 0, 28, 1.0, 0.4, 1, true); continue; }
+    sc.fillStyle = 'rgba(191,244,255,0.9)';
+    sc.beginPath(); sc.ellipse(d.x, d.y, d.r * 0.8, d.r * 1.25, 0, 0, Math.PI * 2); sc.fill();
+  }
+
+  // the letters: held, then falling, then under
+  if (falling) {
+    const fs = s - FALL_AT;
+    let allUnder = true;
+    sc.textBaseline = 'alphabetic';
+    for (let i = 0; i < letters.length; i++) {
+      const l = letters[i];
+      if (l.state === 2) continue;
+      allUnder = false;
+      if (l.state === 0 && fs >= l.release) { l.state = 1; l.vr = (Math.random() - 0.5) * 2.2; l.vx = (Math.random() - 0.5) * 30; }
+      if (l.state === 1) {
+        l.vy += FALL_G * ds; l.y += l.vy * ds; l.x += l.vx * ds; l.rot += l.vr * ds;
+        if (l.y >= level) {
+          l.state = 2; lastSplash = t;
+          addRipple(l.x + l.w / 2, level, 0, l.big ? 90 : 40, l.big ? 2.6 : 1.4, l.big ? 0.7 : 0.45, l.big ? 1.5 : 1, !l.big);
+          if (l.big) splash(l.x + l.w / 2, level);
+          audio.plip(l.big ? 0.7 + Math.random() * 0.3 : 1.4 + Math.random() * 0.4);
+          continue;
+        }
+      }
+      sc.save(); sc.globalAlpha = l.alpha; sc.font = l.font; sc.fillStyle = l.color;
+      sc.translate(l.x + l.w / 2, l.y); sc.rotate(l.rot); sc.translate(-(l.x + l.w / 2), -l.y);
+      sc.fillText(l.chr, l.x, l.y); sc.restore();
+    }
+    // the last word is under the water: now the way down is offered
+    if (allUnder && t - lastSplash > 1.2) { fallen = true; hero.classList.add('fallen'); }
+  }
+}
+
 function frame(now) {
   const dt = Math.min(now - last, 50); last = now;
   // Count only the time the page has been on screen, so an intro opened in a background tab still plays in order.
@@ -450,6 +566,7 @@ function frame(now) {
   } else if (rain.on === false && !rain.armed) {
     for (let i = 0; i < RAIN; i++) rd[i].on = false;
   }
+  drawSweat(dt, level, t);
   requestAnimationFrame(frame);
 }
 requestAnimationFrame(frame);

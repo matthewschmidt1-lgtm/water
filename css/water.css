@@ -76,10 +76,10 @@ button { font: inherit; }
 }
 .hero .scroll-cue {
   position: absolute; bottom: 84px; left: 50%; transform: translateX(-50%);
-  color: var(--muted); font-size: 0.75rem; letter-spacing: 0.25em; text-transform: uppercase;
-  opacity: 0; transition: opacity 2s ease 3.2s;
+  color: var(--mist); font-size: 2.1rem; line-height: 1;
+  opacity: 0; transition: opacity 2s ease;
 }
-.hero.landed .scroll-cue { opacity: 1; }
+.hero.fallen .scroll-cue { opacity: calc(0.55 + var(--breath) * 0.45); }
 
 /* ---------- The ending: a single drop, silence, breath, then the word ---------- */
 #cycle {
@@ -412,7 +412,7 @@ body[data-scene="you"]      { --accent: #ffd6a8; --accent-soft: rgba(255, 214, 1
   /* The front door reads larger on a phone: every line is 1.4x its desktop-derived size. */
   .hero p { font-size: calc(clamp(1rem, 2.2vw, 1.25rem) * 1.4); }
   .hero .breath-hint { font-size: 1.12rem; }
-  .hero .scroll-cue { font-size: 1.05rem; white-space: nowrap; }
+  .hero .scroll-cue { font-size: 2.5rem; }
 
   /* WHERE IS WATER? and FOLLOW THE WATER: complete, reachable, and small enough to leave the scene visible. */
   footer { padding-bottom: calc(120px + env(safe-area-inset-bottom)); }
