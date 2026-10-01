@@ -18,10 +18,7 @@ let skyGrad = null, glowGrad = null;
 let paths = [];              // Path2D per layer
 let frontPath = null, snowPath = null;
 let peakX = 0, peakY = 0, snowY = 0, mergeX = 0, mergeY = 0;
-let streams = [];            // Float32Array of [x,y,...] per stream
-let river = null;            // Float32Array
-let streamPaths = [], riverPath = null;
-let flowOff = 0;
+let main = null, branches = [], streamsB = [], brookTop = 0, bedGrad = null, glints = [], rocks = [];
 let camX = 0, t = 0;
 let readout = null, offPhase = null;
 let x0 = 0, x1 = 0;          // horizontal extent of the generated scene
@@ -55,7 +52,6 @@ function layerPath(f) {
   return p;
 }
 
-function toPath(a) { const p = new Path2D(); p.moveTo(a[0], a[1]); for (let i = 2; i < a.length; i += 2) p.lineTo(a[i], a[i + 1]); return p; }
 
 function layout(ctx) {
   w = ctx.w; h = ctx.h;
@@ -75,41 +71,91 @@ function layout(ctx) {
   for (let x = peakX - w * 0.3; x <= peakX + w * 0.3; x += STEP) snowPath.lineTo(x, snowY + Math.sin(x * 0.05) * 5 + Math.sin(x * 0.013) * 9);
   snowPath.lineTo(peakX + w * 0.3, peakY - 10); snowPath.closePath();
 
-  // Streams start on the snowline and run to a merge point on the lower right slope.
-  mergeX = Math.min(peakX + w * 0.2, w * 0.9); mergeY = h * 0.88;
-  const r = rng(101);
-  streams = [];
-  for (let s = 0; s < N_STREAMS; s++) {
-    const side = s < 2 ? -1 : 1;
-    let x = peakX + side * (0.04 + s % 2 * 0.045) * w + (r() - 0.5) * 10;
-    let y = Math.max(front(x), snowY - 6) + 2;
-    const pts = [x, y];
-    const wig = r() * 6.28;
-    let guard = 0;
-    while (y < mergeY - 3 && guard++ < 400) {
-      const dx = mergeX - x, dy = mergeY - y;
-      const ang = Math.atan2(dy, dx);
-      x += Math.cos(ang) * 7 + Math.sin(y * 0.045 + wig) * 2.2;
-      y += Math.max(3.5, Math.sin(ang) * 7);
-      if (y > mergeY) y = mergeY;
-      y = Math.max(y, front(x) + 3);
-      pts.push(x, y);
-    }
-    streams.push(Float32Array.from(pts));
+    buildBrook(front);
+}
+
+const smooth = (a, b, x) => { const k = Math.max(0, Math.min(1, (x - a) / (b - a))); return k * k * (3 - 2 * k); };
+
+// A branch: sampled centerline with width, normal, tangent, calmness, plus cached ribbon paths.
+function makeBranch(X, Y, W) {
+  const n = X.length, TX = new Float32Array(n), TY = new Float32Array(n), CALM = new Float32Array(n);
+  let L = 0;
+  for (let i = 0; i < n; i++) {
+    const a = Math.max(0, i - 1), b = Math.min(n - 1, i + 1);
+    let dx = X[b] - X[a], dy = Y[b] - Y[a]; const m = Math.hypot(dx, dy) || 1;
+    TX[i] = dx / m; TY[i] = dy / m;
+    if (i) L += Math.hypot(X[i] - X[i - 1], Y[i] - Y[i - 1]);
   }
-  const rv = [mergeX, mergeY];
-  for (let x = mergeX, y = mergeY; x < x1 + 20; x += 8) { y += (h + 30 - mergeY) / ((x1 - mergeX) / 8); rv.push(x, y + Math.sin(x * 0.03) * 4); }
-  river = Float32Array.from(rv);
-  streamPaths = streams.map(toPath);
-  riverPath = toPath(river);
+  for (let i = 0; i < n; i++) { const a = Math.max(0, i - 4), b = Math.min(n - 1, i + 4); CALM[i] = Math.max(0, 1 - Math.hypot(TX[b] - TX[a], TY[b] - TY[a]) * 1.6); }
+  const ribbon = (k, add) => {
+    const p = new Path2D();
+    for (let i = 0; i < n; i++) { const hw = W[i] * k / 2 + add; const x = X[i] + TY[i] * hw * -1, y = Y[i] + TX[i] * hw; i ? p.lineTo(x, y) : p.moveTo(x, y); }
+    for (let i = n - 1; i >= 0; i--) { const hw = W[i] * k / 2 + add; p.lineTo(X[i] + TY[i] * hw, Y[i] - TX[i] * hw); }
+    p.closePath(); return p;
+  };
+  return { n, X, Y, W, TX, TY, CALM, L, bank: ribbon(1.0, 1.6), bed: ribbon(1.0, 0), core: ribbon(0.5, 0) };
+}
+
+function buildBrook(front) {
+  const phone = w < 620;
+  const maxW = w * (phone ? 0.36 : 0.21);
+  const ytop = snowY + (h - snowY) * 0.2, yend = h + 12;
+  const M = 150, r = rng(7);
+  const ph0 = r() * 6.28, startX = peakX - w * 0.01;
+  const X = new Float32Array(M + 1), Y = new Float32Array(M + 1), W = new Float32Array(M + 1);
+  for (let i = 0; i <= M; i++) {
+    const s = i / M;
+    const base = startX + (w / 2 - startX) * Math.pow(s, 0.8);
+    const amp = w * ((phone ? 0.03 : 0.04) + (phone ? 0.09 : 0.13) * Math.pow(s, 1.1));
+    const phase = ph0 + 6.283 * 2.6 * Math.pow(s, 0.65);
+    X[i] = base + amp * Math.sin(phase) * (1 - smooth(0.84, 1, s)) * smooth(0, 0.06, s);
+    Y[i] = ytop + s * (yend - ytop);
+    W[i] = 2.2 + (maxW - 2.2) * Math.pow(s, 1.7);
+  }
+  main = makeBranch(X, Y, W);
+  brookTop = ytop;
+  bedGrad = c.createLinearGradient(0, ytop, 0, h);
+  bedGrad.addColorStop(0, '#0c3347'); bedGrad.addColorStop(1, '#0f5266');
+  branches = [main];
+  const starts = [-0.055, 0.045, 0.1], joins = [0, 0, 16];
+  for (let k = 0; k < 3; k++) {
+    const sx = peakX + starts[k] * w, j = joins[k], ex = X[j], ey = Y[j];
+    const sy = Math.max(front(sx), snowY - 6) + 2, m = 34, wig = r() * 6.28;
+    const sX = new Float32Array(m + 1), sY = new Float32Array(m + 1), sW = new Float32Array(m + 1);
+    for (let i = 0; i <= m; i++) {
+      const s = i / m;
+      sX[i] = sx + (ex - sx) * s + w * 0.018 * Math.sin(s * 9 + wig) * Math.sin(Math.PI * s);
+      sY[i] = Math.max(sy + (ey - sy) * Math.pow(s, 0.9), front(sX[i]) + 2);
+      sW[i] = 1.2 + s * s * (W[j] * 0.5 + 0.8);
+    }
+    const br = makeBranch(sX, sY, sW); br.join = j; streamsB[k] = br;
+    branches.push(br);
+  }
+  // glints advected along each branch
+  glints = [];
+  const add = (br, cnt, bias) => { for (let i = 0; i < cnt; i++) glints.push({ br, t: Math.random(), lat: (Math.random() * 2 - 1) * 0.82, sp: 0.8 + Math.random() * 0.5, a: 0.4 + Math.random() * 0.6 }); void bias; };
+  add(main, phone ? 46 : 64, 0);
+  for (let k = 0; k < 3; k++) add(streamsB[k], 5, 0);
+  for (const g of glints) if (g.br === main) g.t = Math.pow(g.t, 0.7);
+  // rocks
+  const spec = [[0.14, -0.3], [0.26, 0.45], [0.37, -1.25], [0.46, 0.2], [0.55, 1.2], [0.63, -0.4], [0.72, 0.35], [0.8, -1.2], [0.86, 0.1], [0.93, -0.45], [0.95, 1.15]];
+  const pick = phone ? [1, 3, 5, 6, 8, 9] : spec.map((_, i) => i);
+  rocks = [];
+  for (const q of pick) {
+    const [t0, side] = spec[q], i = Math.round(t0 * M), z = t0;
+    const hw = W[i] / 2, rr = (2.4 + z * 20) * (0.8 + r() * 0.5) * (phone ? 0.68 : 1);
+    const wet = Math.abs(side) < 1;
+    rocks.push({ x: X[i] - main.TY[i] * side * hw * (wet ? 0.9 : 1) - main.TY[i] * (wet ? 0 : Math.sign(side) * rr * 0.3), y: Y[i] + main.TX[i] * side * hw, r: rr, wet, ang: Math.atan2(-main.TX[i], main.TY[i]), ph: r() * 6.28, z });
+  }
 }
 
 function startDrop(k) {
-  const s = streams[k % streams.length];
-  const route = new Float32Array(s.length + river.length);
-  route.set(s, 0); route.set(river, s.length);
-  drop.route = route; drop.nStream = s.length / 2; drop.i = 0; drop.u = 0; drop.active = true; drop.stage = '';
-  drop.x = s[0]; drop.y = s[1];
+  const sb = streamsB[k % streamsB.length], pts = [];
+  for (let i = 0; i < sb.n; i++) pts.push(sb.X[i], sb.Y[i]);
+  const ns = sb.n;
+  for (let i = sb.join + 1; i < main.n; i++) pts.push(main.X[i], main.Y[i]);
+  drop.route = Float32Array.from(pts); drop.nStream = ns; drop.i = 0; drop.u = 0; drop.active = true; drop.stage = '';
+  drop.x = sb.X[0]; drop.y = sb.Y[0];
   audio.plip(1.4);
 }
 
@@ -122,8 +168,8 @@ function setStage(name) {
 
 function advanceDrop(dt) {
   const r = drop.route, n = r.length / 2;
-  const f = drop.i / drop.nStream;
-  const speed = f < 0.25 ? 0.08 + f * 0.6 : drop.i < drop.nStream ? 0.2 : 0.32;
+  const zz = Math.max(0, Math.min(1, (drop.y - brookTop) / (h - brookTop)));
+  const speed = 0.07 + 0.2 * zz + (drop.i < 6 ? 0 : 0.03);
   let dist = speed * dt;
   while (dist > 0 && drop.i < n - 1) {
     const ax = r[drop.i * 2], ay = r[drop.i * 2 + 1], bx = r[drop.i * 2 + 2], by = r[drop.i * 2 + 3];
@@ -135,8 +181,8 @@ function advanceDrop(dt) {
   const i2 = drop.i * 2;
   drop.x = r[i2] + (r[i2 + 2] - r[i2]) * drop.u;
   drop.y = r[i2 + 1] + (r[i2 + 3] - r[i2 + 1]) * drop.u;
-  const g = drop.i / drop.nStream;
-  setStage(drop.i >= drop.nStream ? STAGES[4] : g < 0.08 ? STAGES[0] : g < 0.22 ? STAGES[1] : g < 0.6 ? STAGES[2] : STAGES[3]);
+  const g = drop.i / n;
+  setStage(g < 0.03 ? STAGES[0] : g < 0.12 ? STAGES[1] : g < 0.3 ? STAGES[2] : g < 0.55 ? STAGES[3] : STAGES[4]);
 }
 
 function spark() {
@@ -177,6 +223,78 @@ function drawTaps(c, dt) {
   c.globalAlpha = 1;
 }
 
+
+function drawBrook(dt, b) {
+  const flow = reduced ? 0.03 : 1 + 0.55 * (1 - b);
+  c.fillStyle = 'rgba(5,18,30,0.55)';
+  for (let i = 0; i < branches.length; i++) c.fill(branches[i].bank);
+  c.fillStyle = bedGrad;
+  for (let i = 0; i < branches.length; i++) c.fill(branches[i].bed);
+  c.fillStyle = 'rgba(70,175,190,0.14)';
+  for (let i = 0; i < branches.length; i++) c.fill(branches[i].core);
+
+  // glints ride the current: faster downstream, faster on the exhale
+  c.lineCap = 'round';
+  for (let i = 0; i < glints.length; i++) {
+    const g = glints[i], br = g.br, n1 = br.n - 1;
+    const fi = Math.min(n1 - 0.001, g.t * n1), k = fi | 0, f = fi - k;
+    const z = Math.max(0, (br.Y[k] - brookTop) / (h - brookTop));
+    g.t += (0.025 + 0.12 * z) * g.sp * flow * dt / br.L;
+    if (g.t >= 1) { g.t = 0; g.lat = (Math.random() * 2 - 1) * 0.82; g.sp = 0.8 + Math.random() * 0.5; }
+    const x = br.X[k] + (br.X[k + 1] - br.X[k]) * f, y = br.Y[k] + (br.Y[k + 1] - br.Y[k]) * f;
+    const hw = (br.W[k] / 2) * g.lat, tx = br.TX[k], ty = br.TY[k];
+    const px = x - ty * hw, py = y + tx * hw, len = 2.5 + z * 16 * g.sp;
+    const calm = 0.45 + 0.55 * (1 - br.CALM[k]) + z * 0.2;
+    const fade = Math.sin(Math.PI * g.t) ** 0.6;
+    c.strokeStyle = `rgba(190,246,252,${(g.a * calm * fade * (reduced ? 0.35 : 0.55 + 0.25 * Math.sin(t * 0.004 + i * 1.7))).toFixed(3)})`;
+    c.lineWidth = 0.7 + z * 1.7;
+    c.beginPath(); c.moveTo(px, py); c.lineTo(px - tx * len, py - ty * len); c.stroke();
+  }
+
+  // rocks: wake, stone, then the foam V on the upstream face
+  const sh = reduced ? 0.5 : 0;
+  for (let i = 0; i < rocks.length; i++) {
+    const k = rocks[i], r = k.r, tw = reduced ? 0.5 : 0.6 + 0.4 * Math.sin(t * 0.007 + k.ph);
+    c.save(); c.translate(k.x, k.y); c.rotate(k.ang);
+    if (k.wet) {
+      c.lineWidth = 0.8 + k.z * 1.2; c.lineCap = 'round';
+      for (let j = 0; j < 2; j++) {         // standing ripples behind the stone, fixed in place
+        const d = r * (1.5 + j * 1.1);
+        c.strokeStyle = `rgba(170,235,245,${(0.16 - j * 0.05) * (reduced ? 0.6 : 0.75 + 0.25 * Math.sin(t * 0.003 + k.ph + j))})`;
+        c.beginPath(); c.ellipse(0, d, r * (0.7 + j * 0.2), r * 0.22, 0, 0.3, Math.PI - 0.3); c.stroke();
+      }
+      for (let j = -1; j <= 1; j++) {       // trailing wake streaks
+        const L2 = r * (2.8 + (j ? 0 : 1.5)), wob = reduced ? 0 : Math.sin(t * 0.005 + j + k.ph) * r * 0.08;
+        c.strokeStyle = `rgba(200,248,252,${0.28 * tw})`;
+        c.beginPath(); c.moveTo(j * r * 0.55, r * 0.5); c.quadraticCurveTo(j * r * 0.7 + wob, r + L2 * 0.5, j * r * 1.05, r * 0.5 + L2); c.stroke();
+      }
+    }
+    c.fillStyle = 'rgba(4,14,24,0.45)';       // shadow
+    c.beginPath(); c.ellipse(r * 0.15, r * 0.35, r * 1.3, r * 0.8, 0, 0, 7); c.fill();
+    c.fillStyle = '#34506a';
+    c.beginPath(); c.ellipse(0, 0, r * 1.15, r * 0.85, 0, 0, 7); c.fill();
+    c.fillStyle = '#5f8199';
+    c.beginPath(); c.ellipse(-r * 0.2, -r * 0.22, r * 0.8, r * 0.5, -0.2, 0, 7); c.fill();
+    c.fillStyle = 'rgba(190,225,240,0.35)';
+    c.beginPath(); c.ellipse(-r * 0.35, -r * 0.4, r * 0.3, r * 0.16, -0.3, 0, 7); c.fill();
+    if (k.wet) {
+      c.lineWidth = 1 + k.z * 1.6;
+      c.strokeStyle = `rgba(240,252,255,${0.55 * tw})`;
+      c.beginPath(); c.moveTo(-r * 0.3, -r * 0.8); c.quadraticCurveTo(-r * 1.2, -r * 1.2, -r * 1.7, -r * 0.4);
+      c.moveTo(r * 0.3, -r * 0.8); c.quadraticCurveTo(r * 1.2, -r * 1.2, r * 1.7, -r * 0.4); c.stroke();
+      // white-water flecks
+      c.fillStyle = `rgba(245,253,255,${0.5 * tw})`;
+      const nf = 3 + (k.z * 6 | 0);
+      for (let j = 0; j < nf; j++) {
+        const a = k.ph * 7 + j * 2.1, rad = r * (1 + (j % 3) * 0.35), fl = reduced ? 1 : 0.5 + 0.5 * Math.sin(t * 0.009 + j * 1.9 + k.ph);
+        c.globalAlpha = fl; c.beginPath(); c.arc(Math.cos(a) * rad * 1.2, Math.sin(a) * rad * 0.7 - r * 0.2 + (sh ? 0 : 0), 0.8 + k.z * 1.3, 0, 7); c.fill();
+      }
+      c.globalAlpha = 1;
+    }
+    c.restore();
+  }
+}
+
 let runs = 0, idle = 0;
 
 export default {
@@ -213,7 +331,6 @@ export default {
     if (drop.active) advanceDrop(dt);
     const camTarget = drop.active && !reduced ? Math.max(-PAN, Math.min(PAN, w / 2 - drop.x)) : 0;
     camX += (camTarget - camX) * Math.min(1, dt * 0.0025);
-    flowOff -= (reduced ? 0.008 : 0.03 + 0.045 * b) * dt;
 
     c.fillStyle = skyGrad; c.fillRect(0, 0, w, h);
 
@@ -232,19 +349,7 @@ export default {
     c.globalAlpha = 1; c.fillStyle = '#eef6fb'; c.fill(snowPath);
     c.restore();
 
-    // Streams and river: a faint solid bed, then a moving dashed thread.
-    c.lineCap = 'round'; c.lineJoin = 'round';
-    c.strokeStyle = 'rgba(47,184,198,0.4)';
-    c.lineWidth = 2;
-    for (let i = 0; i < streamPaths.length; i++) c.stroke(streamPaths[i]);
-    c.lineWidth = 5; c.stroke(riverPath);
-    c.setLineDash([5, 9]); c.lineDashOffset = flowOff;
-    c.strokeStyle = `rgba(127,242,255,${0.6 + b * 0.25})`;
-    c.lineWidth = 1.2;
-    for (let i = 0; i < streamPaths.length; i++) c.stroke(streamPaths[i]);
-    c.lineDashOffset = flowOff * 0.55;   // the wide, shallow river runs slower than the steep streams
-    c.lineWidth = 2.4; c.stroke(riverPath);
-    c.setLineDash([]);
+    drawBrook(dt, b);
 
     // Melt sparkles drifting off the snow on the exhale.
     for (let i = 0; i < MAX_SPARK; i++) {
@@ -260,10 +365,11 @@ export default {
 
     // The travelling drop.
     if (drop.active) {
+      const dz = Math.max(0, Math.min(1, (drop.y - brookTop) / (h - brookTop))), dr = 3 + dz * 4;
       c.fillStyle = 'rgba(127,242,255,0.22)';
-      c.beginPath(); c.arc(drop.x, drop.y, 14, 0, Math.PI * 2); c.fill();
+      c.beginPath(); c.arc(drop.x, drop.y, dr * 3, 0, Math.PI * 2); c.fill();
       c.fillStyle = '#dffbff';
-      c.beginPath(); c.arc(drop.x, drop.y, 4.5, 0, Math.PI * 2); c.fill();
+      c.beginPath(); c.arc(drop.x, drop.y, dr, 0, Math.PI * 2); c.fill();
     }
     c.restore();
     drawTaps(c, dt);
