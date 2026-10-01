@@ -4,7 +4,7 @@
 // Interface: layout(w, h, puddleY), draw(c, dt, t, b, amount), pointer(x, y, down), reduced, residual.
 
 const TAU = Math.PI * 2;
-const NF = 560, NB = 48, NR = 40, MAXC = 700, ROWS = 12, M = 30, RL = 900;
+const NF = 1100, NB = 48, NR = 40, MAXC = 700, ROWS = 12, M = 30, RL = 900;
 
 const X = new Float32Array(NF), Y = new Float32Array(NF);
 const VX = new Float32Array(NF), VY = new Float32Array(NF);   // stir velocities, decay back to zero
@@ -148,8 +148,8 @@ const snow = {
     if (!sprites) buildSprites();
     const px = ow ? nw / ow : 1, py2 = oh ? nh / oh : 1;
     w = nw; h = nh; puddleY = py; ph = Math.max(1, h - puddleY);
-    N = Math.max(180, Math.min(520, Math.round(180 + (w - 375) / 1225 * 340)));
-    nN = Math.min(36, Math.round(12 + (N - 180) / 340 * 22));
+    N = Math.max(360, Math.min(1000, Math.round(360 + (w - 375) / 1225 * 640)));
+    nN = Math.min(60, Math.round(24 + (N - 360) / 640 * 36));
     nM = Math.round((N - nN) * 0.36); nF = N - nN - nM;
     depK = (w / N) / 2.1;
     const oc = nC, ocw = cw, old = oc ? BANK.slice(0, oc) : null;
@@ -255,7 +255,7 @@ const snow = {
         const x = X[i];
         if (x >= 0 && x <= w) {
           if (cold > 0.06 && Math.random() < cold * 0.95 * (ly === 2 ? 0.5 : 1)) deposit(x, (ly === 0 ? 0.4 : ly === 1 ? 0.8 : 1.6) * depK);
-          else if (ly > 0 || Math.random() < 0.25) ring(x, land, ly === 0 ? 0.3 : ly === 1 ? 0.6 : 1);
+          else if (Math.random() < (ly > 0 ? 0.5 : 0.125)) ring(x, land, ly === 0 ? 0.3 : ly === 1 ? 0.6 : 1);
         }
         if (TH[i] < a) spawn(i); else Y[i] = -1e6;
         if (Y[i] > -1e5 && front >= h) Y[i] = -(ly === 2 ? SZ[i] : 4) - Math.random() * 40;
