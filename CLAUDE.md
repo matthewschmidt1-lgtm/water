@@ -45,7 +45,7 @@ Commit to `main` and push; Railway redeploys. `package.json` runs `serve -s . -l
 ## Page order (top to bottom)
 
 1. **Hero** (`js/hero.js`): a night lake. A drop falls, WATER appears, then the tagline a second later. The title sweats at 3 s, its letters fall into the lake and splash, then a lone down arrow appears (it fades once the visitor scrolls). Scrolling away and back to the top replays the title and its melt. The lake has its own weather: wisp cloud, gusts, rain, mist. It reacts to presence (`js/presence.js`): pointer wake, idle glassiness, tap splashes, and press-and-hold raises a spout that climbs, plumes, and rains back in.
-2. **Rain** (`rain.js`): Drizzle, Rain, Downpour, Storm, Gully Gusher chips (the last swings the wind both ways and gives every drop its own eddy). Taller band on phones.
+2. **Weather** (`rain.js`, section id still `rain`): Fog and Snow (modules in `js/chapters/weather/`, drawn over the rain sky, each with pointer interaction), then Drizzle, Rain, Downpour, Storm, Gully Gusher chips (the last swings the wind both ways and gives every drop its own eddy). Taller band on phones.
 3. **Mountain** (`mountain.js`): a river in perspective that winds down from the snowline toward the viewer, with gravel banks, current lines, and lit stones. A drop runs it on arrival. Taller band on phones.
 4. **Ocean** (`ocean.js`): dispersive waves with peaked crests, a wind slider (the owner wants this kept), tap to drop a stone.
 5. **Closer** (`#closer`): four words on the shore, Sky, Lab, Cup, You. Clicking one opens that chapter in place; one open at a time. The menu and the journey open the right one first via the `water:open` event.

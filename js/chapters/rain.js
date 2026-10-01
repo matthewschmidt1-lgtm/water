@@ -1,6 +1,9 @@
 // Rain. Procedural rain over a dark-blue sky, landing in a puddle band.
-// Five weathers. Storm brings gusts and lightning. The Gully Gusher throws rain every which way.
+// Seven weathers. Fog and snow are their own modules (weather/fog.js, weather/snow.js) drawn over this sky.
+// Five rains. Storm brings gusts and lightning. The Gully Gusher throws rain every which way.
 // The breath eases and hurries the rain.
+import fog from './weather/fog.js';
+import snow from './weather/snow.js';
 
 const MAX = 760, MAX_RINGS = 90;
 const MODES = {
@@ -10,8 +13,11 @@ const MODES = {
   storm:    { n: 520, speed: 1.75, len: 32, wind: 0.62, width: 1.6, alpha: 0.62, gust: true, ring: 0.2, flashMin: 2800, flashVar: 3600 },
   // chaos: the wind swings both ways and every drop is shoved about by its own eddy
   gusher:   { n: 760, speed: 2.25, len: 36, wind: 0.1,  width: 1.8, alpha: 0.66, gust: true, ring: 0.26, flashMin: 1400, flashVar: 2600, chaos: 1 },
+  // no rain at all: the air itself is the weather
+  fog:      { n: 0,   speed: 0.34, len: 7,  wind: 0.03, width: 1.0, alpha: 0.42, gust: false, fx: 'fog' },
+  snow:     { n: 0,   speed: 0.34, len: 7,  wind: 0.03, width: 1.0, alpha: 0.42, gust: false, fx: 'snow' },
 };
-const LABELS = { drizzle: 'Drizzle', rain: 'Rain', downpour: 'Downpour', storm: 'Storm', gusher: 'Gully Gusher' };
+const LABELS = { fog: 'Fog', snow: 'Snow', drizzle: 'Drizzle', rain: 'Rain', downpour: 'Downpour', storm: 'Storm', gusher: 'Gully Gusher' };
 
 const X = new Float32Array(MAX), Y = new Float32Array(MAX), S = new Float32Array(MAX), L = new Float32Array(MAX);
 const RX = new Float32Array(MAX_RINGS), RY = new Float32Array(MAX_RINGS), RT = new Float32Array(MAX_RINGS), RS = new Float32Array(MAX_RINGS);
@@ -22,7 +28,7 @@ let c, w, h, reduced, audio;
 let mode = MODES.rain;
 let t = 0, wind = 0, dens = 140;   // dens: how many streaks are in the air; eases, so a weather change arrives as a front
 let flash = 0, nextFlash = 6000;
-let puddleY = 0;
+let puddleY = 0, fogA = 0, snowA = 0;
 let skyGrad = null, puddleGrad = null, horizonGrad = null;
 
 function seed(i) {
@@ -51,6 +57,7 @@ function layout(ctx) {
   puddleGrad.addColorStop(0.12, '#0b3352');
   puddleGrad.addColorStop(1, '#04111f');
   for (let i = 0; i < MAX; i++) { seed(i); if (i >= dens) Y[i] = -1e6; }
+  fog.layout(w, h, puddleY); snow.layout(w, h, puddleY);
 }
 
 function ring(x, y, size = 1) {
@@ -74,7 +81,7 @@ export default {
     const body = document.createElement('div');
     body.className = 'chapter-body left';
     body.innerHTML = `
-      <p class="chapter-kicker">Rain</p>
+      <p class="chapter-kicker">Weather</p>
       <h2>Change the weather.</h2>
       <p class="lede">Some rain whispers. Some rain shouts. Pick one, then tap the puddle and listen.</p>
       <div class="controls"><div class="chip-row" role="group" aria-label="Weather">${
@@ -89,7 +96,11 @@ export default {
     el.appendChild(body);
     const chips = [...body.querySelectorAll('.chip')];
     chips.forEach((b) => b.addEventListener('click', () => { setMode(b.dataset.mode, chips); audio.plip(1.1); }));
+    fog.reduced = snow.reduced = reduced;
     layout(ctx);
+    const at = (e, down) => { const r = ctx.canvas.getBoundingClientRect(), x = e.clientX - r.left, y = e.clientY - r.top; if (fogA > 0.02) fog.pointer(x, y, down); if (snowA > 0.02) snow.pointer(x, y, down); };
+    ctx.canvas.addEventListener('pointermove', (e) => at(e, false));
+    ctx.canvas.addEventListener('pointerdown', (e) => at(e, true));
 
     ctx.canvas.addEventListener('pointerdown', (e) => {
       const r = ctx.canvas.getBoundingClientRect();
@@ -173,6 +184,12 @@ export default {
         c.beginPath(); c.ellipse(RX[k], RY[k], R * 0.62, R * 0.62 * 0.28, 0, 0, Math.PI * 2); c.stroke();
       }
     }
+
+    // Fog rolls in and lifts; snow arrives as a front and thaws. Each eases over a few seconds.
+    fogA += ((mode.fx === 'fog' ? 1 : 0) - fogA) * Math.min(1, dt * 0.0007);
+    snowA += ((mode.fx === 'snow' ? 1 : 0) - snowA) * Math.min(1, dt * 0.0007);
+    if (snowA > 0.002 || snow.residual > 0.02) snow.draw(c, dt, t, b, snowA > 0.002 ? snowA : 0);
+    if (fogA > 0.002) fog.draw(c, dt, t, b, fogA);
 
     // Lightning: storm and gusher only, a short white breath over everything. The gusher flashes far more often.
     if (mode.gust && !reduced) {
