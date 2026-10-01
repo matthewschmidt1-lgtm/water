@@ -33,6 +33,8 @@ document.documentElement.style.setProperty('--scene-h', sceneH + 'px');
 narrow.addEventListener('change', () => dispatchEvent(new Event('resize')));
 
 const sections = [...document.querySelectorAll('section.chapter[data-chapter]')];
+// Reserve a taller band up front for chapters that ask for one, so nothing shifts when they mount.
+sections.forEach((el) => { const share = parseFloat(el.dataset.band); if (share && narrow.matches) el.style.setProperty('--scene-h', Math.round(lastH * share) + 'px'); });
 
 function makeCtx(el) {
   const canvas = document.createElement('canvas');
@@ -45,7 +47,11 @@ function makeCtx(el) {
       const r = el.getBoundingClientRect();
       ctx.w = Math.max(1, Math.round(r.width));
       // On phones the scene is a band across the top and the copy flows below it (see css: --scene-h).
-      ctx.h = Math.max(1, Math.round(narrow.matches ? sceneH : r.height));
+      // A chapter can ask for a taller band on phones (data-band = share of the screen height).
+      const share = parseFloat(el.dataset.band);
+      const band = share ? Math.round(lastH * share) : sceneH;
+      if (share && narrow.matches) el.style.setProperty('--scene-h', band + 'px'); else if (share) el.style.removeProperty('--scene-h');
+      ctx.h = Math.max(1, Math.round(narrow.matches ? band : r.height));
       ctx.dpr = dpr;
       canvas.width = ctx.w * dpr;
       canvas.height = ctx.h * dpr;
@@ -224,6 +230,12 @@ function checkEntered() {
   if (scrollY > innerHeight * 0.45) { document.body.classList.add('entered'); removeEventListener('scroll', checkEntered); }
 }
 addEventListener('scroll', checkEntered, { passive: true });
+
+// The arrow at the front door is an invitation; once the visitor is moving, it steps back.
+const heroEl = document.querySelector('.hero');
+const arrowWatch = () => heroEl.classList.toggle('scrolled', scrollY > 24);
+addEventListener('scroll', arrowWatch, { passive: true });
+arrowWatch();
 checkEntered();
 
 // The ending: a single drop, silence, breath. Then the word. Then the word itself becomes water:
