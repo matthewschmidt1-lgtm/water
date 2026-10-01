@@ -53,9 +53,12 @@ button { font: inherit; }
   margin-bottom: 20vh;
   opacity: 0;
   transform: translateY(12px);
-  transition: opacity 2.6s ease 0.5s, transform 2.6s ease 0.5s;
+  transition: opacity 1.6s ease 0.3s, transform 1.6s ease 0.3s;
 }
 .hero.revealed .hero-copy { opacity: 1; transform: none; }
+/* The word first. The line arrives about a second after WATER is up. */
+.hero p { opacity: 0; transition: opacity 1.1s ease 2.6s; }
+.hero.revealed p { opacity: 1; }
 .hero h1 {
   font-family: var(--serif);
   font-weight: 400;
@@ -343,7 +346,7 @@ body[data-scene="you"]      { --accent: #ffd6a8; --accent-soft: rgba(255, 214, 1
 
 @media (prefers-reduced-motion: reduce) {
   html { scroll-behavior: auto; }
-  .hero-copy, .scroll-cue { transition-duration: 0.2s; transition-delay: 0s; }
+  .hero-copy, .hero p, .scroll-cue { transition-duration: 0.2s; transition-delay: 0s; }
   .depth[data-level] .l1, .depth[data-level] .l2, .depth[data-level] .l3, #drop-nav.open .drop-list, #drop-nav.open::after { animation: none; }
 }
 /* Phones: the scene is a band across the top (--scene-h, set from js/main.js: 56-62% of the height); the copy flows below on a solid ground. */

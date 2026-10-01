@@ -242,7 +242,7 @@ function measureLetters() {
     const cs = getComputedStyle(el), fs = parseFloat(cs.fontSize), text = node.textContent, range = document.createRange();
     const font = `${cs.fontStyle} ${cs.fontWeight} ${fs}px ${cs.fontFamily}`;
     const upper = cs.textTransform === 'uppercase';
-    const alpha = parseFloat(getComputedStyle(el.closest('.breath-hint') || el).opacity) || 1;
+    const alpha = 1;   // falling letters are always drawn solid, whatever the page's fade happened to be doing
     for (let i = 0; i < text.length; i++) {
       if (text[i] === ' ') continue;
       range.setStart(node, i); range.setEnd(node, i + 1);
@@ -278,7 +278,8 @@ function drawSweat(dt, level, t) {
   sweatAcc += dt;
   if (sweatAcc > 240) {
     sweatAcc = 0;
-    const held = letters.filter((l) => l.state === 0);
+    // the line under the title arrives a moment later; it only starts to sweat once it is fully there
+    const held = letters.filter((l) => l.state === 0 && (l.kind === 0 || s > 3.9));
     if (held.length) for (let i = 0; i < BEADS; i++) if (!beads[i].on) {
       const b = beads[i]; b.on = true; b.l = held[Math.floor(Math.random() * held.length)]; b.u = 0.12 + Math.random() * 0.76; b.v = 0.25 + Math.random() * 0.45; b.t = 0;
       break;
