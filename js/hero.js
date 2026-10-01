@@ -227,7 +227,7 @@ sweatCv.style.cssText = 'position:absolute;inset:0;width:100%;height:100%;pointe
 hero.appendChild(sweatCv);
 const sc = sweatCv.getContext('2d');
 const copyEl = hero.querySelector('.hero-copy');
-const SWEAT_AT = 4, FALL_AT = 7, FALL_G = 1500;   // seconds after the title starts to appear (it takes about 3 s to fade in)
+const SWEAT_AT = 3, FALL_AT = 5.2, FALL_G = 1500;   // seconds after the title starts to appear (it takes about 3 s to fade in)
 let sw = 0, sh2 = 0, letters = null, lettersAt = 0, sweatAcc = 0, falling = false, fallen = false, lastSplash = -1;
 const BEADS = 44, DRIPS = 36;
 const beads = Array.from({ length: BEADS }, () => ({ on: false, l: null, u: 0, v: 0, t: 0 }));
