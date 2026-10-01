@@ -289,8 +289,9 @@ if (cycle) {
       else if (u < 5.4) lift = 1 - (u - 3.8) / 1.6;
       else whale = null;
       if (whale) {
-        const hgt = ch * 0.26, wx = whale.x, baseY = level + 8, top = baseY - hgt * lift;
-        const tilt = Math.sin(t * 0.9) * 0.05;
+        // a smaller fluke, thrown over at an angle the way a diving whale shows it, and leaning further as it goes under
+        const hgt = ch * 0.15, wx = whale.x, baseY = level + 8, top = baseY - hgt * lift;
+        const tilt = whale.dir * (0.5 + (1 - lift) * 0.35) + Math.sin(t * 0.9) * 0.04;
         cc.save(); cc.translate(wx, baseY); cc.rotate(tilt); cc.translate(-wx, -baseY);
         // fluke: two lobes with a notch, on a tapering stem
         cc.fillStyle = '#12334f';
@@ -346,7 +347,7 @@ if (cycle) {
       for (let i = sweat.length - 1; i >= 0; i--) {
         const d = sweat[i]; d.t += dt;
         if (d.l.state !== 0) { sweat.splice(i, 1); continue; }
-        d.r = Math.min(2.6, d.t * 2.2);
+        d.r = Math.min(d.l.big ? 3.6 : 2.4, d.t * 2.6);
         const slide = Math.max(0, d.t - 0.9) * 28;
         const x = d.l.x + d.l.w * d.u, y = d.l.y - d.l.size * 0.72 + d.l.size * 0.72 * d.v + slide;
         if (y > d.l.y + 6) { drips.push({ x, y, vx: 0, vy: 30, r: d.r * 0.8, splashed: false }); sweat.splice(i, 1); continue; }
@@ -366,7 +367,7 @@ if (cycle) {
       });
       // the whale comes to look once the last letter has gone under
       if (!whale && lastSplashT > 0 && letters.every((l) => l.state === 2) && t - lastSplashT > 1.6 && !frame.whaleDone) {
-        whale = { t0: t, x: cw * (0.5 + (Math.random() - 0.5) * 0.3) }; frame.whaleDone = true;
+        whale = { t0: t, x: cw * (0.5 + (Math.random() - 0.5) * 0.3), dir: Math.random() < 0.5 ? -1 : 1 }; frame.whaleDone = true;
       }
     }
 
