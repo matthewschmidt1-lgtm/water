@@ -63,6 +63,10 @@ export default {
       <div class="chapter-body left">
         <p class="chapter-kicker">Ocean</p>
         <h2>The wave moves. The water mostly stays.</h2>
+        <div class="controls">
+          <label>Wind <input type="range" min="0" max="100" value="35" aria-label="Wind">
+            <span class="value">a light breeze</span></label>
+        </div>
         <p class="lede">Watch the sea breathe. Tap it to drop a stone.</p>
         <div class="depth" data-level="1">
           <p class="l1">LOOK: waves go up and down. The water in a wave does not travel to the shore. The energy does.</p>
@@ -72,6 +76,14 @@ export default {
         </div>
       </div>`);
 
+
+    const range = el.querySelector('input[type=range]');
+    const val = el.querySelector('.controls .value');
+    const words = ['glassy calm', 'a light breeze', 'a fresh wind', 'a strong wind', 'a gale'];
+    range.addEventListener('input', () => {
+      wind = range.value / 100;
+      val.textContent = words[Math.min(4, Math.floor(wind * 4.99))];
+    });
 
     ctx.canvas.addEventListener('pointerdown', (e) => {
       const r = ctx.canvas.getBoundingClientRect();
