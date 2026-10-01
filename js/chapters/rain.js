@@ -82,7 +82,7 @@ export default {
     body.className = 'chapter-body left';
     body.innerHTML = `
       <p class="chapter-kicker">Weather</p>
-      <h2>Change the weather.</h2>
+      <h2>Choose the weather.</h2>
       <p class="lede">Some rain whispers. Some rain shouts. Pick one, then tap the puddle and listen.</p>
       <div class="controls"><div class="chip-row" role="group" aria-label="Weather">${
         Object.keys(MODES).map((k) => `<button class="chip" data-mode="${k}" aria-pressed="${k === 'rain'}">${LABELS[k]}</button>`).join('')

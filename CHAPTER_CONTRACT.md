@@ -31,7 +31,7 @@ export default {
 ```html
 <div class="chapter-body left">            <!-- left | right | (centered default) ; add "bottom" to push copy below a scene -->
   <p class="chapter-kicker">02 — Rain</p>
-  <h2>Change the weather.</h2>
+  <h2>Choose the weather.</h2>
   <p class="lede">One or two sentences a six-year-old gets.</p>
   <div class="controls"> ... range inputs, .chip buttons ... </div>
   <div class="depth" data-level="1">
