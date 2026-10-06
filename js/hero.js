@@ -155,17 +155,17 @@ let lastRainEnd = -1e9, lastEnd = 0, wasBusy = false, nextAt = -1, queue = null,
 const EV_WISP = 0, EV_GUST = 1, EV_RAIN = 2;
 
 function fire(type, t) {
-  if (type === EV_WISP) { wisp.on = true; wisp.t0 = t; wisp.dur = 22 + rnd() * 6; wisp.y = 0.07 + rnd() * 0.13; wisp.k = 0.8 + rnd() * 0.5; }
-  else if (type === EV_GUST) { gust.on = true; gust.t0 = t; gust.dur = 11 + rnd() * 5; gust.dir = 1; }
+  if (type === EV_WISP) { wisp.on = true; wisp.t0 = t; wisp.dur = 14 + rnd() * 4; wisp.y = 0.07 + rnd() * 0.13; wisp.k = 0.8 + rnd() * 0.5; }
+  else if (type === EV_GUST) { gust.on = true; gust.t0 = t; gust.dur = 8 + rnd() * 4; gust.dir = 1; }
   else if (type === EV_RAIN && !rcloud.on) {
-    rcloud.on = true; rcloud.t0 = t; rcloud.dur = 6 + 15 + rnd() * 8 + 5; rcloud.dx = (rnd() - 0.5) * 60;
-    rain.armed = true; rain.t0 = t + 6; rain.dur = 15 + rnd() * 8; rain.peak = 0.5 + rnd() * 0.4;
+    rcloud.on = true; rcloud.t0 = t; rcloud.dur = 4 + 10 + rnd() * 6 + 4; rcloud.dx = (rnd() - 0.5) * 60;
+    rain.armed = true; rain.t0 = t + 4; rain.dur = 10 + rnd() * 6; rain.peak = 0.5 + rnd() * 0.4;
   }
 }
 function planNext(t) {
   let type;
-  if (t - lastRainEnd > 75 * K && rnd() < 0.4) type = EV_RAIN; else type = rnd() < 0.5 ? EV_WISP : EV_GUST;
-  queue[qi] = { at: t + (20 + rnd() * 20) * K, type };
+  if (t - lastRainEnd > 40 * K && rnd() < 0.45) type = EV_RAIN; else type = rnd() < 0.5 ? EV_WISP : EV_GUST;
+  queue[qi] = { at: t + (8 + rnd() * 10) * K, type };
 }
 
 function updateWeather(t, dt, level) {
@@ -177,7 +177,7 @@ function updateWeather(t, dt, level) {
   const ev = queue[qi];
   if (t >= ev.at) { fire(ev.type, t); qi++; if (qi >= queue.length) planNext(t); nextAt = queue[qi].at; }
   // linger long enough and the world carries on without you
-  else if (presence.idleMs > 30000 && !busy && ev.at - t > 3 && t - lastEnd > 6) ev.at = t + 1;
+  else if (presence.idleMs > 15000 && !busy && ev.at - t > 3 && t - lastEnd > 4) ev.at = t + 1;
 
   if (wisp.on && t > wisp.t0 + wisp.dur) wisp.on = false;
   if (gust.on && t > gust.t0 + gust.dur) gust.on = false;
@@ -367,9 +367,9 @@ function frame(now) {
     if (revealed && nextAt < 0) {
       tRevealed = t;
       queue = [
-        { at: t + (8 + rnd() * 4) * K, type: EV_WISP },
-        { at: t + (22 + rnd() * 4) * K, type: EV_GUST },
-        { at: t + (34 + rnd() * 10) * K, type: EV_RAIN },
+        { at: t + (5 + rnd() * 3) * K, type: EV_WISP },
+        { at: t + (14 + rnd() * 4) * K, type: EV_GUST },
+        { at: t + (22 + rnd() * 6) * K, type: EV_RAIN },
       ];
       nextAt = queue[0].at;
     }
@@ -619,7 +619,7 @@ breath.onPhase((p) => {
     mistS.target = 0;
   } else if (p === 'inhale' && !reduced && nextAt >= 0 && !mistS.on && !rain.on && !rain.armed) {
     const t = tVis;
-    if (t - mistS.last > 30 * K && t > tRevealed + 18 * K && rnd() < 0.5) { mistS.on = true; mistS.target = 1; mistS.last = t; }
+    if (t - mistS.last > 18 * K && t > tRevealed + 12 * K && rnd() < 0.5) { mistS.on = true; mistS.target = 1; mistS.last = t; }
   }
 });
 
