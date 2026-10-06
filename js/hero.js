@@ -236,7 +236,7 @@ const sc = sweatCv.getContext('2d');
 const copyEl = hero.querySelector('.hero-copy');
 const SWEAT_AT = 3, FALL_AT = 7.2, FALL_G = 1500;   // seconds after the title starts to appear (it takes about 3 s to fade in)
 let sw = 0, sh2 = 0, letters = null, lettersAt = 0, sweatAcc = 0, falling = false, fallen = false, lastSplash = -1;
-const BEADS = 44, DRIPS = 36;
+const BEADS = 110, DRIPS = 80;
 const beads = Array.from({ length: BEADS }, () => ({ on: false, l: null, u: 0, v: 0, t: 0 }));
 const hdrips = Array.from({ length: DRIPS }, () => ({ on: false, x: 0, y: 0, vy: 0, r: 1 }));
 function measureLetters() {
@@ -283,7 +283,7 @@ function drawSweat(dt, level, t) {
 
   // sweat: a new bead now and then on a letter that is still holding on
   sweatAcc += dt;
-  if (sweatAcc > 240) {
+  if (sweatAcc > 95) {
     sweatAcc = 0;
     // the line under the title arrives a moment later; it only starts to sweat once it is fully there
     const held = letters.filter((l) => l.state === 0 && (l.kind === 0 || s > 3.9));
