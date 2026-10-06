@@ -155,17 +155,17 @@ let lastRainEnd = -1e9, lastEnd = 0, wasBusy = false, nextAt = -1, queue = null,
 const EV_WISP = 0, EV_GUST = 1, EV_RAIN = 2;
 
 function fire(type, t) {
-  if (type === EV_WISP) { wisp.on = true; wisp.t0 = t; wisp.dur = 14 + rnd() * 4; wisp.y = 0.07 + rnd() * 0.13; wisp.k = 0.8 + rnd() * 0.5; }
-  else if (type === EV_GUST) { gust.on = true; gust.t0 = t; gust.dur = 8 + rnd() * 4; gust.dir = 1; }
+  if (type === EV_WISP) { wisp.on = true; wisp.t0 = t; wisp.dur = 9 + rnd() * 3; wisp.y = 0.07 + rnd() * 0.13; wisp.k = 0.8 + rnd() * 0.5; }
+  else if (type === EV_GUST) { gust.on = true; gust.t0 = t; gust.dur = 6 + rnd() * 3; gust.dir = 1; }
   else if (type === EV_RAIN && !rcloud.on) {
-    rcloud.on = true; rcloud.t0 = t; rcloud.dur = 4 + 10 + rnd() * 6 + 4; rcloud.dx = (rnd() - 0.5) * 60;
-    rain.armed = true; rain.t0 = t + 4; rain.dur = 10 + rnd() * 6; rain.peak = 0.5 + rnd() * 0.4;
+    rcloud.on = true; rcloud.t0 = t; rcloud.dur = 3 + 7 + rnd() * 4 + 3; rcloud.dx = (rnd() - 0.5) * 60;
+    rain.armed = true; rain.t0 = t + 3; rain.dur = 7 + rnd() * 4; rain.peak = 0.5 + rnd() * 0.4;
   }
 }
 function planNext(t) {
   let type;
-  if (t - lastRainEnd > 40 * K && rnd() < 0.45) type = EV_RAIN; else type = rnd() < 0.5 ? EV_WISP : EV_GUST;
-  queue[qi] = { at: t + (8 + rnd() * 10) * K, type };
+  if (t - lastRainEnd > 22 * K && rnd() < 0.45) type = EV_RAIN; else type = rnd() < 0.5 ? EV_WISP : EV_GUST;
+  queue[qi] = { at: t + (4 + rnd() * 6) * K, type };
 }
 
 function updateWeather(t, dt, level) {
@@ -177,7 +177,7 @@ function updateWeather(t, dt, level) {
   const ev = queue[qi];
   if (t >= ev.at) { fire(ev.type, t); qi++; if (qi >= queue.length) planNext(t); nextAt = queue[qi].at; }
   // linger long enough and the world carries on without you
-  else if (presence.idleMs > 15000 && !busy && ev.at - t > 3 && t - lastEnd > 4) ev.at = t + 1;
+  else if (presence.idleMs > 8000 && !busy && ev.at - t > 2 && t - lastEnd > 3) ev.at = t + 1;
 
   if (wisp.on && t > wisp.t0 + wisp.dur) wisp.on = false;
   if (gust.on && t > gust.t0 + gust.dur) gust.on = false;
@@ -367,9 +367,9 @@ function frame(now) {
     if (revealed && nextAt < 0) {
       tRevealed = t;
       queue = [
-        { at: t + (5 + rnd() * 3) * K, type: EV_WISP },
-        { at: t + (14 + rnd() * 4) * K, type: EV_GUST },
-        { at: t + (22 + rnd() * 6) * K, type: EV_RAIN },
+        { at: t + (4 + rnd() * 2) * K, type: EV_WISP },
+        { at: t + (10 + rnd() * 3) * K, type: EV_GUST },
+        { at: t + (15 + rnd() * 4) * K, type: EV_RAIN },
       ];
       nextAt = queue[0].at;
     }
@@ -378,19 +378,19 @@ function frame(now) {
     flowBoost = Math.max(flowBoost * Math.exp(-dt / 1800), boostT);
   }
 
-  // clouds, high in the sky
+  // clouds, high in the sky (their place is kept so the water can carry their reflection)
+  let wx = 0, wy = 0, ww = 0, wh = 0, wa = 0, rx = 0, ry = 0, rw = 0, rh = 0;
   if (wisp.on) {
     const u = (t - wisp.t0) / wisp.dur;
-    const cw = Math.min(560, w * 0.9) * wisp.k, ch = cw * 150 / 560;
-    c.globalAlpha = Math.sin(Math.PI * clamp(u, 0, 1)) * 0.9;
-    c.drawImage(wispSprite, -cw + (w + cw * 2) * u, wisp.y * h - ch / 2 + Math.sin(u * 3) * 6, cw, ch);
-    c.globalAlpha = 1;
+    ww = Math.min(560, w * 0.9) * wisp.k; wh = ww * 150 / 560;
+    wa = Math.sin(Math.PI * clamp(u, 0, 1)) * 0.9;
+    wx = -ww + (w + ww * 2) * u; wy = wisp.y * h - wh / 2 + Math.sin(u * 3) * 6;
+    c.globalAlpha = wa; c.drawImage(wispSprite, wx, wy, ww, wh); c.globalAlpha = 1;
   }
   if (cover > 0.01) {
-    const cw = w * 1.5, ch = cw * 220 / 1100;
-    c.globalAlpha = cover * 0.75;
-    c.drawImage(rainSprite, (w - cw) / 2 + rcloud.dx + (t - rcloud.t0) * 2, h * 0.14 - ch / 2, cw, ch);
-    c.globalAlpha = 1;
+    rw = w * 1.5; rh = rw * 220 / 1100;
+    rx = (w - rw) / 2 + rcloud.dx + (t - rcloud.t0) * 2; ry = h * 0.14 - rh / 2;
+    c.globalAlpha = cover * 0.75; c.drawImage(rainSprite, rx, ry, rw, rh); c.globalAlpha = 1;
   }
 
   // The water: a surface that rises and falls with the breath.
@@ -413,6 +413,26 @@ function frame(now) {
   c.moveTo(0, h);
   for (let i = 0; i < n; i++) c.lineTo(i * 8, surf[i]);
   c.lineTo(w, h); c.closePath(); c.fill();
+  // The water holds the clouds: a soft upside-down copy, squashed by the low viewing angle, crossing with them.
+  if (wa > 0.01 || cover > 0.01) {
+    const sq = 0.42 * (1 - 0.3 * gAmp);   // chop breaks the mirror a little
+    c.save();
+    c.beginPath(); c.moveTo(0, h);
+    for (let i = 0; i < n; i++) c.lineTo(i * 8, surf[i] + 1);
+    c.lineTo(w, h); c.closePath(); c.clip();
+    c.scale(1, -1);
+    if (wa > 0.01) {
+      const d = level - (wy + wh / 2);
+      c.globalAlpha = wa * (0.28 + glass * 0.3);
+      c.drawImage(wispSprite, wx, -(level + d * sq) - wh * sq / 2, ww, wh * sq);
+    }
+    if (cover > 0.01) {
+      const d = level - (ry + rh / 2);
+      c.globalAlpha = cover * (0.22 + glass * 0.2);
+      c.drawImage(rainSprite, rx, -(level + d * sq) - rh * sq / 2, rw, rh * sq);
+    }
+    c.restore();
+  }
   // surface glint (glassier when nobody is touching the water)
   c.strokeStyle = `rgba(127,242,255,${0.15 + breath.value * 0.25 + glass * 0.12})`;
   c.lineWidth = 1;
@@ -619,7 +639,7 @@ breath.onPhase((p) => {
     mistS.target = 0;
   } else if (p === 'inhale' && !reduced && nextAt >= 0 && !mistS.on && !rain.on && !rain.armed) {
     const t = tVis;
-    if (t - mistS.last > 18 * K && t > tRevealed + 12 * K && rnd() < 0.5) { mistS.on = true; mistS.target = 1; mistS.last = t; }
+    if (t - mistS.last > 12 * K && t > tRevealed + 8 * K && rnd() < 0.5) { mistS.on = true; mistS.target = 1; mistS.last = t; }
   }
 });
 
