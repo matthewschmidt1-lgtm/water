@@ -109,7 +109,7 @@ button { font: inherit; }
 #cycle .cycle-word {
   position: absolute; bottom: 48%; left: 0; right: 0; text-align: center; margin: 0;
   font-family: var(--serif); letter-spacing: 0.42em; text-indent: 0.42em; font-size: calc(clamp(2rem, 6vw, 4rem) * 1.4); line-height: 1.1;
-  opacity: 0; transform: scale(calc(1 + var(--breath) * 0.03)); transition: opacity 1.6s ease 2.4s;
+  opacity: 0; transition: opacity 1.6s ease 2.4s;   /* no breath scale here: the canvas takes the letters over in place */
 }
 #cycle.is-visible .cycle-word { opacity: 1; }
 #cycle .cycle-last {

@@ -239,20 +239,19 @@ if (cycle) {
   function buildLetters() {
     letters = [];
     const sec = cycle.getBoundingClientRect();
+    // every letter's real box from the DOM, so the canvas copy sits exactly where the page's text was (no jump at the swap)
     const take = (el, big) => {
-      const cs = getComputedStyle(el), r = el.getBoundingClientRect();
-      const font = `${cs.fontStyle} ${cs.fontWeight} ${cs.fontSize} ${cs.fontFamily}`;
-      const spacing = parseFloat(cs.letterSpacing) || 0;
-      const text = el.textContent;
-      cc.font = font;
-      const widths = [...text].map((chr) => cc.measureText(chr).width);
-      const total = widths.reduce((a, b) => a + b, 0) + spacing * (text.length - 1);
-      let x = r.left - sec.left + (r.width - total) / 2;
-      const y = r.top - sec.top + parseFloat(cs.fontSize) * 0.8;   // baseline
-      [...text].forEach((chr, i) => {
-        if (chr !== ' ') letters.push({ chr, x, y, w: widths[i], size: parseFloat(cs.fontSize), font, big, vy: 0, vx: 0, rot: 0, vr: 0, state: 0, t: 0, color: big ? 'rgba(244,249,251,1)' : 'rgba(244,249,251,0.62)' });
-        x += widths[i] + spacing;
-      });
+      let node = el.firstChild; while (node && node.nodeType !== 3) node = node.firstChild;
+      if (!node) return;
+      const cs = getComputedStyle(el), fs = parseFloat(cs.fontSize), text = node.textContent, range = document.createRange();
+      const font = `${cs.fontStyle} ${cs.fontWeight} ${fs}px ${cs.fontFamily}`;
+      for (let i = 0; i < text.length; i++) {
+        if (text[i] === ' ') continue;
+        range.setStart(node, i); range.setEnd(node, i + 1);
+        const r = range.getBoundingClientRect();
+        if (r.width <= 0) continue;
+        letters.push({ chr: text[i], x: r.left - sec.left, y: r.top - sec.top + r.height * 0.5 + fs * 0.32, w: r.width, size: fs, font, big, vy: 0, vx: 0, rot: 0, vr: 0, state: 0, t: 0, color: big ? 'rgba(244,249,251,1)' : 'rgba(244,249,251,0.62)' });
+      }
     };
     take(wordEl, true); take(lastEl, false);
     wordEl.style.visibility = 'hidden'; lastEl.style.visibility = 'hidden';
@@ -307,9 +306,15 @@ if (cycle) {
         // body of the drop: a slightly darker lens with a bright rim and a highlight, elongated when it runs
         const ry = d.r * (d.vy > 5 ? 1.5 : 1.1);
         c.globalAlpha = a;
-        c.fillStyle = 'rgba(150,205,225,0.22)'; c.beginPath(); c.ellipse(d.x, d.y, d.r, ry, 0, 0, Math.PI * 2); c.fill();
-        c.strokeStyle = 'rgba(225,245,252,0.55)'; c.lineWidth = Math.max(0.8, d.r * 0.14); c.beginPath(); c.ellipse(d.x, d.y, d.r, ry, 0, 0, Math.PI * 2); c.stroke();
-        c.fillStyle = 'rgba(255,255,255,0.75)'; c.beginPath(); c.ellipse(d.x - d.r * 0.35, d.y - ry * 0.4, d.r * 0.28, ry * 0.2, -0.6, 0, Math.PI * 2); c.fill();
+        // a drop on glass is mostly clear: a faint lens, light gathered along its lower edge, a dark upper rim, one small highlight
+        const g = c.createRadialGradient(d.x, d.y + ry * 0.25, 0, d.x, d.y, Math.max(d.r, ry));
+        g.addColorStop(0, 'rgba(160,178,190,0.05)'); g.addColorStop(0.72, 'rgba(170,188,200,0.09)'); g.addColorStop(0.92, 'rgba(205,220,230,0.3)'); g.addColorStop(1, 'rgba(90,105,115,0.35)');
+        c.fillStyle = g; c.beginPath(); c.ellipse(d.x, d.y, d.r, ry, 0, 0, Math.PI * 2); c.fill();
+        c.strokeStyle = 'rgba(20,30,40,0.35)'; c.lineWidth = Math.max(0.6, d.r * 0.08);
+        c.beginPath(); c.ellipse(d.x, d.y, d.r, ry, 0, Math.PI * 1.15, Math.PI * 1.85); c.stroke();   // shadowed top edge
+        c.strokeStyle = 'rgba(225,235,240,0.32)';
+        c.beginPath(); c.ellipse(d.x, d.y, d.r * 0.92, ry * 0.92, 0, Math.PI * 0.15, Math.PI * 0.85); c.stroke();   // light caught along the bottom
+        c.fillStyle = 'rgba(255,255,255,0.5)'; c.beginPath(); c.ellipse(d.x - d.r * 0.38, d.y - ry * 0.42, d.r * 0.16, ry * 0.11, -0.7, 0, Math.PI * 2); c.fill();
       }
       c.globalAlpha = 1;
       requestAnimationFrame(tick);
