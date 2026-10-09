@@ -299,8 +299,10 @@ body:not(.entered) #drop-nav, body:not(.entered) .top-right, body:not(.entered) 
 }
 .ghost:hover, .ghost[aria-pressed="true"] { color: var(--accent); border-color: var(--accent-soft); }
 
-/* The two doors sit at the very end of the page, above the signature. They do not follow the reader. */
-.bottom-bar { display: flex; justify-content: center; flex-wrap: wrap; gap: 10px; margin: 0 0 26px; white-space: nowrap; }
+/* The two doors sit at the very end of the page, above the signature. They do not follow the reader,
+   and they only appear once the whale's last splash has settled. */
+.bottom-bar { display: flex; justify-content: center; flex-wrap: wrap; gap: 10px; margin: 0 0 26px; white-space: nowrap; opacity: 0; pointer-events: none; transition: opacity 2.4s ease; }
+body.doors-open .bottom-bar { opacity: 1; pointer-events: auto; }
 
 /* FOLLOW THE WATER: one drop leads the page. No panel, just the drop, a word, and a quiet way out. */
 /* The drop has the stage: the usual buttons step aside while it travels. */

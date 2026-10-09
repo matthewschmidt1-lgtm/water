@@ -52,7 +52,7 @@ Commit to `main` and push; Railway redeploys. `package.json` runs `serve -s . -l
    - **Sky** (`grove.js`): one tall landscape (170vh on desktop) that composes three modules on stacked canvases: `cloud.js` (dawn sky, cloud that speaks a line each exhale), `tree.js` (on the left, sap climbing to transpiration), `soil.js` (cutaway ground along the bottom, hold the sky to rain, Sand/Loam/Clay chips).
    - **Lab** (`lab.js`), **Cup** (`cup.js`), **You** (`you.js`).
 6. **Ending** (`#cycle`, logic in `js/main.js`): still water, one drop, WATER, "Enjoy it while it lasts." Then the text sweats, letters fall and splash, and a small angled whale fluke rises and slides under. It replays every time the visitor scrolls down into it.
-7. **Footer**: the two buttons (Where is water? / Follow the water; they are no longer fixed to the screen), then "Made by Matty", linking to https://matthew-schmidt-production.up.railway.app/.
+7. **Footer**: the two buttons (Where is water? / Follow the water; not fixed to the screen, and hidden until the whale's slap has settled, `body.doors-open`), then "Made by Matty", linking to https://matthew-schmidt-production.up.railway.app/.
 
 Global mechanics:
 

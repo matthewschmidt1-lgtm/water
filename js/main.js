@@ -334,6 +334,7 @@ if (cycle) {
     splashes.push({ x, t, big: true, huge: true }); splashes.push({ x, t: t + 0.25, big: true, huge: true });
     audio.plip(0.35); audio.pour?.(1.6);
     setTimeout(wetScreen, 260);   // the spray takes a moment to reach the glass
+    setTimeout(() => document.body.classList.add('doors-open'), 3200);   // once the water has settled, the two doors appear
   }
 
   const frame = (now) => {
@@ -504,6 +505,7 @@ if (cycle) {
   }
   function play() {
     clearStage();
+    if (reduced) setTimeout(() => document.body.classList.add('doors-open'), 4000);
     sizeCycle(); started = true; t0 = performance.now(); cycle.classList.add('is-visible');
     if (!running) { running = true; requestAnimationFrame(frame); }
   }
