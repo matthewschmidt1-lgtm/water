@@ -236,6 +236,10 @@ if (cycle) {
   const SEQ_AT = 2.4 + 3;                 // WATER begins to appear at 2.4 s; three seconds later it starts to sweat
   let letters = null, sweat = [], splashes = [], drips = [], whale = null, plume = null, lastSplashT = -1;
   const G = 1500;                         // px/s^2
+  const mistSprite = document.createElement('canvas'); mistSprite.width = mistSprite.height = 64;
+  { const g = mistSprite.getContext('2d'), gr = g.createRadialGradient(32, 32, 0, 32, 32, 32);
+    gr.addColorStop(0, 'rgba(240,250,255,0.9)'); gr.addColorStop(0.45, 'rgba(230,245,252,0.45)'); gr.addColorStop(1, 'rgba(225,242,250,0)');
+    g.fillStyle = gr; g.fillRect(0, 0, 64, 64); }
   function buildLetters() {
     letters = [];
     const sec = cycle.getBoundingClientRect();
@@ -280,10 +284,10 @@ if (cycle) {
     lens.width = W * dpr; lens.height = H * dpr; lensCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
     lensCtx.clearRect(0, 0, W, H);
     const drops = [];
-    const n = Math.round(70 + W * H / 14000);
+    const n = Math.round(30 + W * H / 32000);
     for (let i = 0; i < n; i++) {
       const r = 1.5 + Math.pow(Math.random(), 2.2) * 11;
-      drops.push({ x: Math.random() * W, y: Math.random() * H, r, vy: 0, run: r > 6 && Math.random() < 0.7, at: 0.3 + Math.random() * 2.2, wob: Math.random() * 6.28, born: Math.random() * 0.35 });
+      drops.push({ x: Math.random() * W, y: Math.random() * H, r, vy: 0, run: r > 6 && Math.random() < 0.55, at: 0.3 + Math.random() * 2.2, wob: Math.random() * 6.28, born: Math.random() * 0.35 });
     }
     const t0 = performance.now(); let last = t0;
     const c = lensCtx;
@@ -324,10 +328,16 @@ if (cycle) {
 
   // The fluke slap: a crown of spray, a wall of droplets flung most of the way up the frame, rings that reach the edges.
   function slap(x, level, t) {
-    const n = 11, q = [];
-    for (let i = 0; i < n; i++) q.push({ o: (i + 0.5) / n + (Math.random() - 0.5) * 0.06, h: 0.55 + Math.random() * 0.45, w: 0.7 + Math.random() * 0.6 });
-    plume = { x, t0: t, n, q };
-    for (let i = 0; i < 160; i++) {
+    // a cloud of spray: heavy water low and in the middle, fine mist flung high and wide, no two the same
+    const b = [];
+    for (let i = 0; i < 150; i++) {
+      const spread = (Math.random() + Math.random() - 1) * 0.9;            // most go up, a few lean far out
+      const v = 380 + Math.random() * 720, big = Math.random() < 0.3;
+      b.push({ x: x + (Math.random() - 0.5) * 70, y: level + 6, vx: Math.sin(spread) * v * 0.7 + (Math.random() - 0.5) * 120, vy: -Math.cos(spread) * v,
+        r: big ? 26 + Math.random() * 34 : 10 + Math.random() * 16, a: big ? 0.5 : 0.8, t: -Math.random() * 0.18, life: 1.3 + Math.random() * 1.2 });
+    }
+    plume = { x, t0: t, b };
+    for (let i = 0; i < 110; i++) {
       const a = (Math.random() - 0.5) * 1.3, v = 500 + Math.random() * 900;
       drips.push({ x: x + (Math.random() - 0.5) * 60, y: level, vx: Math.sin(a) * v * 0.55, vy: -Math.cos(a) * v, r: 1.4 + Math.random() * 2.6, splashed: true });
     }
@@ -393,27 +403,30 @@ if (cycle) {
         if (u >= 5.2 && !whale.rang2) { whale.rang2 = true; slap(wx, level, t); }
       }
     }
-    // ---- the slap plume: a crown of water thrown higher than the word ever stood, then collapsing ----
+    // ---- the slap plume: a ragged mass of spray and mist thrown up, spreading as it climbs, collapsing as it falls ----
     if (plume) {
-      const k = (t - plume.t0) / 2.4;
+      const k = (t - plume.t0) / 2.8;
       if (k > 1) plume = null;
       else {
-        const rise = Math.sin(Math.PI * Math.min(1, k * 1.25)) ;
-        const H = ch * 0.78 * rise, W = cw * 0.34 * (0.6 + 0.8 * k), px = plume.x;
-        // tongues of water: each a tapering spike that leans outward
-        cc.fillStyle = `rgba(226,246,252,${0.85 * (1 - k) * (1 - k)})`;
-        for (let i = 0; i < plume.n; i++) {
-          const q = plume.q[i], lean = (q.o - 0.5) * W * 1.6, hh = H * q.h, bw = W * 0.14 * q.w;
-          cc.beginPath();
-          cc.moveTo(px + lean * 0.3 - bw, level + 4);
-          cc.bezierCurveTo(px + lean * 0.5 - bw * 0.4, level - hh * 0.55, px + lean * 0.9 - bw * 0.1, level - hh * 0.9, px + lean, level - hh);
-          cc.bezierCurveTo(px + lean * 0.9 + bw * 0.1, level - hh * 0.9, px + lean * 0.5 + bw * 0.4, level - hh * 0.55, px + lean * 0.3 + bw, level + 4);
-          cc.closePath(); cc.fill();
+        let live = 0;
+        for (const b of plume.b) {
+          b.t += dt; if (b.t < 0) continue;
+          b.vy += 520 * dt; b.vx *= 1 - 0.9 * dt; b.vy *= 1 - 0.5 * dt;   // thrown water meets the air: it slows, spreads, and sinks back
+          b.x += b.vx * dt; b.y += b.vy * dt;
+          if (b.y > level + 30) continue;
+          live++;
+          const age = b.t / b.life; if (age > 1) continue;
+          const r = b.r * (0.5 + 1.6 * age);                               // spray diffuses into mist as it goes
+          cc.globalAlpha = (1 - age) * (1 - age) * b.a;
+          cc.drawImage(mistSprite, b.x - r, b.y - r, r * 2, r * 2);
         }
-        // the white boil at the base, and a flash that lights the whole lake for an instant
-        cc.fillStyle = `rgba(236,250,255,${0.55 * (1 - k)})`;
-        cc.beginPath(); cc.ellipse(px, level + 2, W * (0.5 + k), (W * 0.5 + W * k) * 0.22 + 4, 0, 0, Math.PI * 2); cc.fill();
-        if (k < 0.18) { cc.fillStyle = `rgba(226,246,252,${0.22 * (1 - k / 0.18)})`; cc.fillRect(0, 0, cw, ch); }
+        // the white boil where it hit, and a flash that lights the whole lake for an instant
+        cc.globalAlpha = 1;
+        const W = cw * 0.3 * (0.6 + 0.9 * k);
+        cc.fillStyle = `rgba(236,250,255,${0.5 * (1 - k)})`;
+        cc.beginPath(); cc.ellipse(plume.x, level + 2, W, W * 0.2 + 4, 0, 0, Math.PI * 2); cc.fill();
+        if (k < 0.15) { cc.fillStyle = `rgba(226,246,252,${0.2 * (1 - k / 0.15)})`; cc.fillRect(0, 0, cw, ch); }
+        if (!live && k > 0.5) plume = null;
       }
     }
 
