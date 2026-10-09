@@ -234,7 +234,7 @@ if (cycle) {
 
   // ---- the melt ----
   const SEQ_AT = 2.4 + 3;                 // WATER begins to appear at 2.4 s; three seconds later it starts to sweat
-  let letters = null, sweat = [], splashes = [], drips = [], whale = null, lastSplashT = -1;
+  let letters = null, sweat = [], splashes = [], drips = [], whale = null, plume = null, lastSplashT = -1;
   const G = 1500;                         // px/s^2
   function buildLetters() {
     letters = [];
@@ -268,6 +268,69 @@ if (cycle) {
     lastSplashT = t;
   }
 
+  // The slap reaches the visitor: spray lands on the screen itself, beads up, and the heavy drops run down the glass.
+  let lens = null, lensCtx = null;
+  function wetScreen() {
+    if (reduced) return;
+    if (!lens) {
+      lens = document.createElement('canvas'); lens.id = 'lens';
+      lens.style.cssText = 'position:fixed;inset:0;width:100%;height:100%;pointer-events:none;z-index:120';
+      document.body.appendChild(lens); lensCtx = lens.getContext('2d');
+    }
+    const dpr = Math.min(devicePixelRatio || 1, 2), W = innerWidth, H = innerHeight;
+    lens.width = W * dpr; lens.height = H * dpr; lensCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    lensCtx.clearRect(0, 0, W, H);
+    const drops = [];
+    const n = Math.round(70 + W * H / 14000);
+    for (let i = 0; i < n; i++) {
+      const r = 1.5 + Math.pow(Math.random(), 2.2) * 11;
+      drops.push({ x: Math.random() * W, y: Math.random() * H, r, vy: 0, run: r > 6 && Math.random() < 0.7, at: 0.3 + Math.random() * 2.2, wob: Math.random() * 6.28, born: Math.random() * 0.35 });
+    }
+    const t0 = performance.now(); let last = t0;
+    const c = lensCtx;
+    const tick = (now) => {
+      const t = (now - t0) / 1000, dt = Math.min(0.05, (now - last) / 1000); last = now;
+      if (t > 9) { c.clearRect(0, 0, W, H); return; }
+      // everything on the glass slowly dries; what has run leaves a thinning streak behind it
+      if (t > 1.2) { c.globalCompositeOperation = 'destination-out'; c.fillStyle = `rgba(0,0,0,${t > 5 ? 0.09 : 0.012})`; c.fillRect(0, 0, W, H); }
+      c.globalCompositeOperation = 'source-over';
+      for (const d of drops) {
+        if (t < d.born) continue;
+        if (d.run && t > d.at) {
+          d.vy = Math.min(d.vy + (d.r * 25) * dt, 60 + d.r * 22);
+          d.y += d.vy * dt; d.x += Math.sin(t * 3 + d.wob) * 8 * dt;
+          d.r = Math.max(2.5, d.r - 0.9 * dt);   // it leaves some of itself behind as it goes
+          if (d.y > H + 20) { d.run = false; d.r = 0; }
+        }
+        if (d.r <= 0) continue;
+        const a = Math.min(1, (t - d.born) / 0.12);
+        // body of the drop: a slightly darker lens with a bright rim and a highlight, elongated when it runs
+        const ry = d.r * (d.vy > 5 ? 1.5 : 1.1);
+        c.globalAlpha = a;
+        c.fillStyle = 'rgba(150,205,225,0.22)'; c.beginPath(); c.ellipse(d.x, d.y, d.r, ry, 0, 0, Math.PI * 2); c.fill();
+        c.strokeStyle = 'rgba(225,245,252,0.55)'; c.lineWidth = Math.max(0.8, d.r * 0.14); c.beginPath(); c.ellipse(d.x, d.y, d.r, ry, 0, 0, Math.PI * 2); c.stroke();
+        c.fillStyle = 'rgba(255,255,255,0.75)'; c.beginPath(); c.ellipse(d.x - d.r * 0.35, d.y - ry * 0.4, d.r * 0.28, ry * 0.2, -0.6, 0, Math.PI * 2); c.fill();
+      }
+      c.globalAlpha = 1;
+      requestAnimationFrame(tick);
+    };
+    requestAnimationFrame(tick);
+  }
+
+  // The fluke slap: a crown of spray, a wall of droplets flung most of the way up the frame, rings that reach the edges.
+  function slap(x, level, t) {
+    const n = 11, q = [];
+    for (let i = 0; i < n; i++) q.push({ o: (i + 0.5) / n + (Math.random() - 0.5) * 0.06, h: 0.55 + Math.random() * 0.45, w: 0.7 + Math.random() * 0.6 });
+    plume = { x, t0: t, n, q };
+    for (let i = 0; i < 160; i++) {
+      const a = (Math.random() - 0.5) * 1.3, v = 500 + Math.random() * 900;
+      drips.push({ x: x + (Math.random() - 0.5) * 60, y: level, vx: Math.sin(a) * v * 0.55, vy: -Math.cos(a) * v, r: 1.4 + Math.random() * 2.6, splashed: true });
+    }
+    splashes.push({ x, t, big: true, huge: true }); splashes.push({ x, t: t + 0.25, big: true, huge: true });
+    audio.plip(0.35); audio.pour?.(1.6);
+    setTimeout(wetScreen, 260);   // the spray takes a moment to reach the glass
+  }
+
   const frame = (now) => {
     if (!started) { running = false; return; }
     const t = (now - t0) / 1000;
@@ -276,37 +339,75 @@ if (cycle) {
     const level = ch * 0.68 + (0.5 - breath.value) * 6;
     const surf = (x) => level + Math.sin(x * 0.02 + t * 0.6) * 1.2;
 
-    // ---- the whale: a fluke rising to look, dripping, then sliding back under ----
+    // ---- the whale: the tail stock rises, the fluke hangs over to look, drips, then slaps the water going under ----
     if (whale) {
       const u = (t - whale.t0);
       let lift = 0; // 0 under .. 1 fully up
-      if (u < 1.6) lift = 1 - Math.pow(1 - u / 1.6, 3);
-      else if (u < 3.8) lift = 1;
-      else if (u < 5.4) lift = 1 - (u - 3.8) / 1.6;
+      if (u < 1.8) lift = 1 - Math.pow(1 - u / 1.8, 3);
+      else if (u < 4.0) lift = 1;
+      else if (u < 5.0) lift = 1 - 0.45 * (u - 4.0);                       // it starts to lean back...
+      else if (u < 5.25) lift = 0.55 * (1 - Math.pow((u - 5.0) / 0.25, 2)); // ...then slaps down hard
       else whale = null;
       if (whale) {
-        // a smaller fluke, thrown over at an angle the way a diving whale shows it, and leaning further as it goes under
-        const hgt = ch * 0.15, wx = whale.x, baseY = level + 8, top = baseY - hgt * lift;
-        const tilt = whale.dir * (0.5 + (1 - lift) * 0.35) + Math.sin(t * 0.9) * 0.04;
+        const hgt = ch * 0.22, wx = whale.x, baseY = level + 10, top = baseY - hgt * lift;
+        const tilt = whale.dir * (0.42 + (1 - lift) * 0.5) + Math.sin(t * 0.9) * 0.03;
         cc.save(); cc.translate(wx, baseY); cc.rotate(tilt); cc.translate(-wx, -baseY);
-        // fluke: two lobes with a notch, on a tapering stem
-        cc.fillStyle = '#12334f';
-        cc.strokeStyle = `rgba(127,242,255,${0.55 * lift})`; cc.lineWidth = 1.4;
+        // the body: a dark back with a pale, wet belly side, lit from the cold sky
+        const body = cc.createLinearGradient(wx - hgt, top, wx + hgt, baseY);
+        body.addColorStop(0, '#0b2338'); body.addColorStop(0.5, '#163b58'); body.addColorStop(1, '#0a1f33');
+        cc.fillStyle = body;
+        cc.strokeStyle = `rgba(160,230,245,${0.5 * lift})`; cc.lineWidth = 1.2; cc.lineJoin = 'round';
+        // tail stock: thick at the water, narrowing to the peduncle, which meets the fluke at the middle of its
+        // leading edge. The lobes spread wide and thick from there and taper to swept tips; the notch is on the top edge.
+        const jn = top + hgt * 0.5;   // where the stock meets the fluke
         cc.beginPath();
-        cc.moveTo(wx - hgt * 0.14, baseY);
-        cc.bezierCurveTo(wx - hgt * 0.12, baseY - hgt * 0.45 * lift, wx - hgt * 0.1, top + hgt * 0.3, wx - hgt * 0.62, top + hgt * 0.12);
-        cc.bezierCurveTo(wx - hgt * 0.5, top - hgt * 0.02, wx - hgt * 0.18, top - hgt * 0.02, wx, top + hgt * 0.12);
-        cc.bezierCurveTo(wx + hgt * 0.18, top - hgt * 0.02, wx + hgt * 0.5, top - hgt * 0.02, wx + hgt * 0.62, top + hgt * 0.12);
-        cc.bezierCurveTo(wx + hgt * 0.1, top + hgt * 0.3, wx + hgt * 0.12, baseY - hgt * 0.45 * lift, wx + hgt * 0.14, baseY);
+        cc.moveTo(wx - hgt * 0.2, baseY + 6);
+        cc.bezierCurveTo(wx - hgt * 0.2, baseY - hgt * 0.45 * lift, wx - hgt * 0.1, jn + hgt * 0.16, wx - hgt * 0.1, jn);
+        cc.bezierCurveTo(wx - hgt * 0.42, jn + hgt * 0.06, wx - hgt * 0.82, top + hgt * 0.36, wx - hgt * 1.02, top + hgt * 0.1);   // lower (leading) edge to the tip
+        cc.bezierCurveTo(wx - hgt * 0.76, top + hgt * 0.04, wx - hgt * 0.3, top + hgt * 0.12, wx, top + hgt * 0.3);               // upper (trailing) edge to the notch
+        cc.bezierCurveTo(wx + hgt * 0.3, top + hgt * 0.12, wx + hgt * 0.76, top + hgt * 0.04, wx + hgt * 1.02, top + hgt * 0.1);
+        cc.bezierCurveTo(wx + hgt * 0.82, top + hgt * 0.36, wx + hgt * 0.42, jn + hgt * 0.06, wx + hgt * 0.1, jn);
+        cc.bezierCurveTo(wx + hgt * 0.1, jn + hgt * 0.16, wx + hgt * 0.2, baseY - hgt * 0.45 * lift, wx + hgt * 0.2, baseY + 6);
         cc.closePath(); cc.fill(); cc.stroke();
-        // wet sheen along the top edge
-        cc.strokeStyle = `rgba(127,242,255,${0.35 * lift})`; cc.lineWidth = 1.2;
-        cc.beginPath(); cc.moveTo(wx - hgt * 0.55, top + hgt * 0.13); cc.bezierCurveTo(wx - hgt * 0.3, top + hgt * 0.02, wx - hgt * 0.1, top + hgt * 0.04, wx, top + hgt * 0.12); cc.stroke();
+        // the pale underside catching the light along the trailing edge, and a ridge down the stock
+        cc.strokeStyle = `rgba(200,240,250,${0.28 * lift})`; cc.lineWidth = hgt * 0.05; cc.lineCap = 'round';
+        cc.beginPath(); cc.moveTo(wx - hgt * 0.92, top + hgt * 0.12); cc.bezierCurveTo(wx - hgt * 0.7, top + hgt * 0.09, wx - hgt * 0.28, top + hgt * 0.16, wx, top + hgt * 0.32);
+        cc.bezierCurveTo(wx + hgt * 0.28, top + hgt * 0.16, wx + hgt * 0.7, top + hgt * 0.09, wx + hgt * 0.92, top + hgt * 0.12); cc.stroke();
+        cc.strokeStyle = `rgba(127,242,255,${0.18 * lift})`; cc.lineWidth = 1;
+        cc.beginPath(); cc.moveTo(wx, jn + hgt * 0.04); cc.lineTo(wx, baseY); cc.stroke();
+        // barnacle flecks and nicks on the trailing edge: no two whales are alike
+        cc.fillStyle = `rgba(200,225,235,${0.35 * lift})`;
+        for (let k = 0; k < 5; k++) { const fx = wx + (k - 2) * hgt * 0.3 + hgt * 0.04, fy = top + hgt * (0.26 + 0.06 * (k % 2)) + Math.abs(k - 2) * hgt * 0.02; cc.beginPath(); cc.arc(fx, fy, 1.1, 0, Math.PI * 2); cc.fill(); }
+        cc.lineCap = 'butt';
         cc.restore();
-        // water running off the edges while it is up
-        if (lift > 0.6 && Math.random() < 0.5) drips.push({ x: wx + (Math.random() - 0.5) * hgt * 1.1, y: top + hgt * 0.16, vx: (Math.random() - 0.5) * 20, vy: 20 + Math.random() * 40, r: 1.4, splashed: false });
+        // water sheeting off the trailing edge while it is up
+        if (lift > 0.6 && Math.random() < 0.8) drips.push({ x: wx + (Math.random() - 0.5) * hgt * 1.8, y: top + hgt * (0.1 + Math.random() * 0.25), vx: (Math.random() - 0.5) * 20, vy: 20 + Math.random() * 40, r: 1.2 + Math.random() * 0.8, splashed: false });
         if (u > 1.0 && u < 1.05 && !whale.rang) { whale.rang = true; splashes.push({ x: wx, t, big: true }); audio.plip(0.5); }
-        if (u > 5.0 && !whale.rang2) { whale.rang2 = true; splashes.push({ x: wx, t, big: true }); audio.plip(0.6); }
+        // the slap: the fluke hits flat and the lake goes up in a wall of white
+        if (u >= 5.2 && !whale.rang2) { whale.rang2 = true; slap(wx, level, t); }
+      }
+    }
+    // ---- the slap plume: a crown of water thrown higher than the word ever stood, then collapsing ----
+    if (plume) {
+      const k = (t - plume.t0) / 2.4;
+      if (k > 1) plume = null;
+      else {
+        const rise = Math.sin(Math.PI * Math.min(1, k * 1.25)) ;
+        const H = ch * 0.78 * rise, W = cw * 0.34 * (0.6 + 0.8 * k), px = plume.x;
+        // tongues of water: each a tapering spike that leans outward
+        cc.fillStyle = `rgba(226,246,252,${0.85 * (1 - k) * (1 - k)})`;
+        for (let i = 0; i < plume.n; i++) {
+          const q = plume.q[i], lean = (q.o - 0.5) * W * 1.6, hh = H * q.h, bw = W * 0.14 * q.w;
+          cc.beginPath();
+          cc.moveTo(px + lean * 0.3 - bw, level + 4);
+          cc.bezierCurveTo(px + lean * 0.5 - bw * 0.4, level - hh * 0.55, px + lean * 0.9 - bw * 0.1, level - hh * 0.9, px + lean, level - hh);
+          cc.bezierCurveTo(px + lean * 0.9 + bw * 0.1, level - hh * 0.9, px + lean * 0.5 + bw * 0.4, level - hh * 0.55, px + lean * 0.3 + bw, level + 4);
+          cc.closePath(); cc.fill();
+        }
+        // the white boil at the base, and a flash that lights the whole lake for an instant
+        cc.fillStyle = `rgba(236,250,255,${0.55 * (1 - k)})`;
+        cc.beginPath(); cc.ellipse(px, level + 2, W * (0.5 + k), (W * 0.5 + W * k) * 0.22 + 4, 0, 0, Math.PI * 2); cc.fill();
+        if (k < 0.18) { cc.fillStyle = `rgba(226,246,252,${0.22 * (1 - k / 0.18)})`; cc.fillRect(0, 0, cw, ch); }
       }
     }
 
@@ -374,9 +475,11 @@ if (cycle) {
       cc.fillStyle = 'rgba(191,244,255,0.85)'; cc.beginPath(); cc.ellipse(d.x, d.y, d.r * 0.8, d.r * 1.2, 0, 0, Math.PI * 2); cc.fill();
     }
     for (let i = splashes.length - 1; i >= 0; i--) {
-      const sp = splashes[i], k = (t - sp.t) / (sp.big ? 2.6 : 1.4); if (k > 1) { splashes.splice(i, 1); continue; }
-      const R = (sp.big ? 10 + 90 * (1 - Math.exp(-k * 3)) : 3 + 26 * (1 - Math.exp(-k * 3)));
-      cc.strokeStyle = `rgba(127,242,255,${(1 - k) * (1 - k) * (sp.big ? 0.7 : 0.5)})`; cc.lineWidth = sp.big ? 1.4 : 1;
+      const sp = splashes[i], k = (t - sp.t) / (sp.huge ? 3.4 : sp.big ? 2.6 : 1.4); if (k > 1) { splashes.splice(i, 1); continue; }
+      if (k < 0) continue;
+      const reach = sp.huge ? cw * 0.7 : 90;
+      const R = (sp.big ? 10 + reach * (1 - Math.exp(-k * 3)) : 3 + 26 * (1 - Math.exp(-k * 3)));
+      cc.strokeStyle = `rgba(127,242,255,${(1 - k) * (1 - k) * (sp.big ? 0.7 : 0.5)})`; cc.lineWidth = sp.huge ? 2.2 : sp.big ? 1.4 : 1;
       cc.beginPath(); cc.ellipse(sp.x, level, R, R * 0.26, 0, 0, Math.PI * 2); cc.stroke();
       if (sp.big && k > 0.15) { cc.strokeStyle = `rgba(127,242,255,${(1 - k) * 0.3})`; cc.beginPath(); cc.ellipse(sp.x, level, R * 0.6, R * 0.16, 0, 0, Math.PI * 2); cc.stroke(); }
     }
@@ -386,7 +489,7 @@ if (cycle) {
   // The ending plays every time the visitor scrolls down into it, not once per page load.
   // clearStage() puts everything back to the dark, empty water; play() runs the scene from the first drop.
   function clearStage() {
-    landed = false; rings = []; letters = null; sweat = []; splashes = []; drips = []; whale = null; lastSplashT = -1;
+    landed = false; rings = []; letters = null; sweat = []; splashes = []; drips = []; whale = null; plume = null; lastSplashT = -1;
     frame.whaleDone = false; frame.last = 0;
     wordEl.style.visibility = ''; lastEl.style.visibility = '';
     wordEl.style.transition = 'none'; lastEl.style.transition = 'none';     // back to invisible at once, not on the fade's delay
