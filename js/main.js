@@ -289,22 +289,118 @@ if (cycle) {
       const r = 1.5 + Math.pow(Math.random(), 2.2) * 11;
       drops.push({ x: Math.random() * W, y: Math.random() * H, r, vy: 0, run: r > 6 && Math.random() < 0.55, at: 0.3 + Math.random() * 2.2, wob: Math.random() * 6.28, born: Math.random() * 0.35 });
     }
+    // ---- the wipers ----
+    // Angles are canvas angles about each pivot: 0 = pointing right, +y is down, so an arm pointing up is -PI/2.
+    // The pivots sit just below the bottom edge (y = H + 10); an arm rests pointing right (aRest, a hair below horizontal so it is
+    // off-screen) and sweeps through negative y, i.e. angle DECREASING by wTrav (~123 deg) to aTop, up and over to the left.
+    // Stroke timing (seconds after wipers start): out 0-1.15, hold at top to 1.5, back to 2.65, rest to 2.9, out to 4.05,
+    // hold to 4.4, back to 5.55; then they fold below the edge by 5.9.
+    const tW = 2.6, wEnd = tW + 5.9, tEnd = wEnd + 2.6;
+    const aRest = 0.04, wTrav = 2.15, aTop = aRest - wTrav;
+    const pyW = H + 10, armL = H * 0.97 + 10, px0 = W * 0.3, px1 = W * 0.7;
+    const wc = document.createElement('canvas');
+    wc.style.cssText = 'position:fixed;inset:0;width:100%;height:100%;pointer-events:none;z-index:121';
+    wc.width = W * dpr; wc.height = H * dpr; document.body.appendChild(wc);
+    const w2 = wc.getContext('2d'); w2.setTransform(dpr, 0, 0, dpr, 0, 0);
+    const ease = (u) => u <= 0 ? 0 : u >= 1 ? 1 : 0.5 - 0.5 * Math.cos(Math.PI * u);
+    const wipeP = (w) => {
+      if (w < 0) return 0;
+      if (w < 1.15) return ease(w / 1.15);
+      if (w < 1.5) return 1;
+      if (w < 2.65) return 1 - ease((w - 1.5) / 1.15);
+      if (w < 2.9) return 0;
+      if (w < 4.05) return ease((w - 2.9) / 1.15);
+      if (w < 4.4) return 1;
+      if (w < 5.55) return 1 - ease((w - 4.4) / 1.15);
+      return 0;
+    };
+    // a couple of small beads left just past each arm's turning point (outside the swept wedge), formed as the blade reverses
+    for (let k = 0; k < 2; k++) {
+      const px = k ? px1 : px0;
+      for (let j = 0; j < 2; j++) {
+        const ang = aTop - 0.05 - Math.random() * 0.04, rad = armL * (0.45 + Math.random() * 0.5);
+        const bx = Math.min(W - 8, Math.max(8, px + Math.cos(ang) * rad)), by = pyW + Math.sin(ang) * rad;
+        if (by < 8 || by > H - 8) continue;
+        drops.push({ x: bx, y: by, r: 2.4 + Math.random() * 2.2, vy: 0, run: false, at: 0, wob: 0, born: tW + (j ? 4.05 : 1.15) + 0.1 + Math.random() * 0.2 });
+      }
+    }
+    let pa = aRest, pp = 0;
     const t0 = performance.now(); let last = t0;
     const c = lensCtx;
     const tick = (now) => {
       const t = (now - t0) / 1000, dt = Math.min(0.05, (now - last) / 1000); last = now;
-      if (t > 9) { c.clearRect(0, 0, W, H); return; }
+      if (t > tEnd) { c.clearRect(0, 0, W, H); wc.remove(); return; }
+      const w = t - tW;
+      if (w > -0.05 && w < 6.2) {
+        w2.clearRect(0, 0, W, H);
+        const rise = w < 0 ? 0 : w < 0.35 ? ease(w / 0.35) : w < 5.55 ? 1 : w < 5.9 ? 1 - ease((w - 5.55) / 0.35) : 0;
+        const p = wipeP(w), vel = dt > 0 ? Math.abs(p - pp) / dt : 0;
+        const dir = p >= pp ? -1 : 1;   // -1: angle decreasing (outward stroke); +1: returning
+        const a = aRest - p * wTrav + Math.sin(w * 53) * Math.min(1, vel * 0.9) * (dir > 0 ? 0.009 : 0.006);   // judder
+        pp = p;
+        if (Math.abs(a - pa) > 1e-5) {
+          const lo = Math.min(a, pa) - 0.003, hi = Math.max(a, pa) + 0.003;
+          c.globalCompositeOperation = 'source-over'; c.globalAlpha = 1;
+          for (let k = 0; k < 2; k++) {
+            const px = k ? px1 : px0;
+            // the blade clears the glass along the sector between its last angle and this one
+            c.save(); c.beginPath(); c.moveTo(px, pyW); c.arc(px, pyW, armL + 6, lo, hi, false); c.closePath(); c.clip();
+            c.clearRect(0, 0, W, H); c.restore();
+            for (const d of drops) {
+              if (d.r <= 0 || t < d.born) continue;
+              const dx = d.x - px, dy = d.y - pyW, dist = Math.sqrt(dx * dx + dy * dy);
+              if (dist > armL + d.r + 6) continue;
+              const ang = Math.atan2(dy, dx), m = d.r / Math.max(dist, 1);
+              if (ang > lo - m && ang < hi + m) d.r = 0;
+            }
+            // on the way back it leaves a few fine streaks in its wake
+            if (dir > 0 && vel > 0.4 && Math.random() < 0.5) {
+              const sr = armL * (0.3 + Math.random() * 0.7), len = 0.012 + Math.random() * 0.03;
+              c.strokeStyle = 'rgba(205,222,232,0.13)'; c.lineWidth = 0.5 + Math.random() * 0.7;
+              c.beginPath(); c.arc(px, pyW, sr, a - len - 0.005, a - 0.004, false); c.stroke();
+            }
+          }
+        }
+        pa = a;
+        if (rise > 0) {
+          const py = pyW + (1 - rise) * 70, mv = Math.min(1, vel);
+          for (let k = 0; k < 2; k++) {
+            const px = k ? px1 : px0;
+            // the thin film of water pushed ahead of the blade
+            if (mv > 0.05) {
+              w2.lineCap = 'round';
+              const ah = a + dir * 0.006, ah2 = a + dir * 0.013;
+              w2.strokeStyle = `rgba(225,238,246,${0.07 * mv})`; w2.lineWidth = 7;
+              w2.beginPath(); w2.moveTo(px + Math.cos(ah2) * armL * 0.3, py + Math.sin(ah2) * armL * 0.3); w2.lineTo(px + Math.cos(ah2) * armL, py + Math.sin(ah2) * armL); w2.stroke();
+              w2.strokeStyle = `rgba(232,243,250,${0.2 * mv})`; w2.lineWidth = 2.2;
+              w2.beginPath(); w2.moveTo(px + Math.cos(ah) * armL * 0.3, py + Math.sin(ah) * armL * 0.3); w2.lineTo(px + Math.cos(ah) * armL, py + Math.sin(ah) * armL); w2.stroke();
+            }
+            w2.save(); w2.translate(px, py); w2.rotate(a); w2.lineCap = 'round';
+            w2.shadowColor = 'rgba(0,0,0,0.35)'; w2.shadowBlur = 9; w2.shadowOffsetY = 4;
+            w2.strokeStyle = '#121518'; w2.lineWidth = 5.5;                       // rubber blade
+            w2.beginPath(); w2.moveTo(armL * 0.28, 0); w2.lineTo(armL, 0); w2.stroke();
+            w2.strokeStyle = '#4b5158'; w2.lineWidth = 3;                         // metal arm
+            w2.beginPath(); w2.moveTo(0, 0); w2.lineTo(armL * 0.62, 0); w2.stroke();
+            w2.shadowColor = 'transparent'; w2.shadowBlur = 0; w2.shadowOffsetY = 0;
+            w2.strokeStyle = 'rgba(255,255,255,0.2)'; w2.lineWidth = 0.8;
+            w2.beginPath(); w2.moveTo(0, -0.9); w2.lineTo(armL * 0.62, -0.9); w2.stroke();
+            w2.fillStyle = '#2f343a'; w2.beginPath(); w2.arc(0, 0, 8, 0, Math.PI * 2); w2.fill();
+            w2.restore();
+          }
+        }
+      }
       // everything on the glass slowly dries; what has run leaves a thinning streak behind it
       if (t > 1.2) { c.globalCompositeOperation = 'destination-out'; c.fillStyle = `rgba(0,0,0,${t > 5 ? 0.09 : 0.012})`; c.fillRect(0, 0, W, H); }
       c.globalCompositeOperation = 'source-over';
       for (const d of drops) {
         if (t < d.born) continue;
-        if (d.run && t > d.at) {
+        if (d.run && d.r > 0 && t > d.at) {
           d.vy = Math.min(d.vy + (d.r * 25) * dt, 60 + d.r * 22);
           d.y += d.vy * dt; d.x += Math.sin(t * 3 + d.wob) * 8 * dt;
           d.r = Math.max(2.5, d.r - 0.9 * dt);   // it leaves some of itself behind as it goes
           if (d.y > H + 20) { d.run = false; d.r = 0; }
         }
+        if (d.r > 0 && t > wEnd) { d.run = false; d.r = d.r * (1 - 0.9 * dt) - 0.8 * dt; }   // what the wipers left behind evaporates
         if (d.r <= 0) continue;
         const a = Math.min(1, (t - d.born) / 0.12);
         // body of the drop: a slightly darker lens with a bright rim and a highlight, elongated when it runs

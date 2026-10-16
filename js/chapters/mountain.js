@@ -72,6 +72,7 @@ function layout(ctx) {
   snowPath.lineTo(peakX + w * 0.3, peakY - 10); snowPath.closePath();
 
     buildBrook(front);
+  buildLife();
 }
 
 const smooth = (a, b, x) => { const k = Math.max(0, Math.min(1, (x - a) / (b - a))); return k * k * (3 - 2 * k); };
@@ -233,6 +234,221 @@ function buildBrook(front) {
     const wet = Math.abs(side) < 1;
     rocks.push({ x: X[i] - main.TY[i] * side * hw * (wet ? 0.9 : 1) - main.TY[i] * (wet ? 0 : Math.sign(side) * rr * 0.3), y: Y[i] + main.TX[i] * side * hw * FS, r: rr, wet, ang: Math.atan2(-main.TX[i], main.TY[i]), ph: r() * 6.28, z, spr: rockSprite(rr, r, wet) });
   }
+}
+
+// ---- Life: wildflowers on the banks, a butterfly, a dragonfly, a far eagle ----
+const FPAL = {
+  yel: ['#e6dc96', '#b89a3c'], wht: ['#e4ecef', '#c9b05a'], pnk: ['#c88ca2', '#e8d49a'], blu: ['#8da4dc', '#e4e8c0'],
+};
+const FMIX = [['yel'], ['wht'], ['pnk'], ['blu'], ['wht', 'yel'], ['pnk', 'wht'], ['blu', 'wht'], ['yel', 'pnk']];
+let fSprites = null, flowers = [], bfAnch = [];
+const bf = { x: 0, y: 0, tx: 0, ty: 0, mode: 0, wait: 0, rest: false, amp: 1, lean: 0, fp: 0, rp: 0, p: 0, big: false };
+const df = { x: 0, y: 0, tx: 0, ty: 0, mode: 1, wait: 600, ang: 0.3, p: 0 };
+const eagle = { p: 4000 };
+
+// A clump of stems and small rosette heads, drawn once, cooled toward the night-blue so it sits in the scene.
+function flowerSprite(rnd, keys) {
+  const S = 2, W = 44, H = 48;
+  const cv = document.createElement('canvas'); cv.width = W * S; cv.height = H * S;
+  const g = cv.getContext('2d'); g.scale(S, S); g.translate(W / 2, H - 3);
+  g.lineCap = 'round';
+  for (let k = 0; k < 4; k++) {   // leaf blades at the base
+    const a = (k / 3 - 0.5) * 2.2 + (rnd() - 0.5) * 0.4;
+    g.fillStyle = k % 2 ? '#2a5249' : '#23463f';
+    g.beginPath(); g.ellipse(Math.sin(a) * 4, -2.5 - rnd() * 2, 1.1, 5 + rnd() * 3, a, 0, 7); g.fill();
+  }
+  const n = 5 + Math.floor(rnd() * 4), heads = [];
+  for (let k = 0; k < n; k++) {
+    const a = (k / (n - 1) - 0.5) * 1.5 + (rnd() - 0.5) * 0.3, len = (13 + rnd() * 14) * (1 - Math.abs(a) * 0.3);
+    const bx = (rnd() - 0.5) * 8, tx = bx + Math.sin(a) * len, ty = -Math.cos(a) * len;
+    g.strokeStyle = '#2f5e52'; g.lineWidth = 0.9;
+    g.beginPath(); g.moveTo(bx, 0); g.quadraticCurveTo(bx + Math.sin(a) * len * 0.15, -len * 0.55, tx, ty); g.stroke();
+    heads.push([tx, ty, rnd()]);
+  }
+  for (const [hx, hy, q] of heads) {
+    const pal = FPAL[keys[q < 0.72 ? 0 : keys.length - 1]], pr = 2 + rnd() * 1.1, rot = rnd() * 6;
+    g.fillStyle = pal[0];
+    for (let p = 0; p < 5; p++) {
+      const an = p * 1.2566 + rot;
+      g.beginPath(); g.ellipse(hx + Math.cos(an) * pr * 0.8, hy + Math.sin(an) * pr * 0.7, pr * 0.62, pr * 0.42, an, 0, 7); g.fill();
+    }
+    g.fillStyle = pal[1]; g.beginPath(); g.arc(hx, hy, pr * 0.34, 0, 7); g.fill();
+  }
+  g.globalCompositeOperation = 'source-atop';
+  const sh = g.createLinearGradient(0, -H, 0, 3);
+  sh.addColorStop(0, 'rgba(20,48,78,0.2)'); sh.addColorStop(1, 'rgba(6,20,34,0.5)');
+  g.fillStyle = sh; g.fillRect(-W, -H, W * 2, H + 6);
+  return { cv, W, H };
+}
+
+function buildLife() {
+  const phone = w < 620, r = rng(4242), M = main.n - 1, X = main.X, Y = main.Y, Wd = main.W;
+  if (!fSprites) { fSprites = []; for (let v = 0; v < 16; v++) fSprites.push(flowerSprite(r, FMIX[v % 8])); }
+  flowers.length = 0;
+  const centers = phone ? 20 : 36;
+  for (let ci = 0; ci < centers; ci++) {
+    const t0 = 0.4 + 0.58 * Math.pow(r(), 0.75), side = r() < 0.5 ? -1 : 1, fac = 1.12 + r() * 0.5, cnt = 2 + Math.floor(r() * 3);
+    for (let q = 0; q < cnt; q++) {
+      const i = Math.max(0, Math.min(M, Math.round((t0 + (r() - 0.5) * 0.05) * M)));
+      const hw = Wd[i] / 2 * (fac + (r() - 0.5) * 0.15) + 3 + r() * 5;
+      const x = X[i] - main.TY[i] * side * hw + (r() - 0.5) * 10, y = Y[i] + main.TX[i] * side * hw * FS + (r() - 0.5) * 5;
+      if (x < 8 || x > w - 8 || y > h - 4 || y < brookTop) continue;
+      let bad = false;
+      for (let j = 0; j <= M && !bad; j++) {   // is this point inside the ribbon at sample j? solve across (s) and along (u) in the squeezed frame
+        const dx = x - X[j], dy = y - Y[j], tx = main.TX[j], ty = main.TY[j], det = -(ty * ty + FS * tx * tx);
+        if (Math.abs((dx * ty - dy * tx) / det) < Wd[j] / 2 * 1.06 && Math.abs((-ty * dy - tx * FS * dx) / det) < main.L / M * 1.3) bad = true;
+      }
+      for (let j = 0; j < rocks.length && !bad; j++) if (Math.hypot(x - rocks[j].x, (y - rocks[j].y) * 1.6) < rocks[j].r * 1.6) bad = true;
+      if (bad) continue;
+      const zz = (y - brookTop) / (h - brookTop);
+      flowers.push({ x, y, sc: (0.3 + 0.95 * zz) * (phone ? 0.8 : 1) * (0.85 + r() * 0.3), ph: r() * 6.28, spr: fSprites[Math.floor(r() * 16)] });
+    }
+  }
+  flowers.sort((a, b2) => a.y - b2.y);
+  bfAnch.length = 0;
+  for (const f of flowers) if (f.y > h * 0.7) bfAnch.push(f);
+  if (!bfAnch.length) for (const f of flowers) bfAnch.push(f);
+  bf.big = !phone;
+  const a0 = bfAnch[0];
+  bf.x = bf.tx = a0 ? a0.x : w * 0.3; bf.y = bf.ty = a0 ? a0.y - 30 : h * 0.85; bf.mode = 0; bf.rest = false;
+  const i0 = Math.round(M * 0.9);
+  df.x = df.tx = X[i0]; df.y = df.ty = Math.min(h - 14, Y[i0]); df.mode = 1; df.wait = 500;
+}
+
+function drawFlowers(b) {
+  const sway = reduced ? 0 : 1;
+  for (let i = 0; i < flowers.length; i++) {
+    const f = flowers[i], sp = f.spr, sk = (Math.sin(t * 0.0012 + f.ph) * 0.025 + b * 0.03 - 0.015) * sway;
+    c.save(); c.translate(f.x, f.y); c.transform(1, 0, sk, 1, 0, 0);
+    c.drawImage(sp.cv, -sp.W * f.sc / 2, -sp.H * f.sc + 3 * f.sc, sp.W * f.sc, sp.H * f.sc);
+    c.restore();
+  }
+}
+
+function pickBf() {
+  const n = bfAnch.length; if (!n) return;
+  const f = bfAnch[(Math.random() * n) | 0];
+  bf.rest = Math.random() < 0.5;
+  bf.tx = f.x + (bf.rest ? 0 : (Math.random() - 0.5) * 70); bf.ty = f.y - f.sc * 30 - (bf.rest ? 0 : 6 + Math.random() * 26);
+}
+
+function drawButterfly(dt) {
+  const sp = reduced ? 0.3 : 1;
+  bf.p += dt * sp;
+  if (bf.mode === 0) {
+    const dx = bf.tx - bf.x, dy = bf.ty - bf.y, d = Math.hypot(dx, dy) || 1;
+    const v = Math.min(d, (0.03 + 0.025 * (0.5 + 0.5 * Math.sin(bf.p * 0.011))) * dt * sp);
+    bf.x += dx / d * v; bf.y += dy / d * v;
+    bf.lean += (Math.max(-0.5, Math.min(0.5, dx / d * 0.5)) - bf.lean) * Math.min(1, dt * 0.004);
+    if (d < 3) { if (bf.rest) { bf.mode = 1; bf.wait = 1800 + Math.random() * 2400; } else pickBf(); }
+  } else {
+    bf.lean += (0 - bf.lean) * Math.min(1, dt * 0.004);
+    bf.wait -= dt * sp; if (bf.wait <= 0) { bf.mode = 0; pickBf(); }
+  }
+  bf.amp += ((bf.mode === 0 ? 1 : 0) - bf.amp) * Math.min(1, dt * 0.005);
+  const p = bf.p, a = bf.amp;
+  const ox = (Math.sin(p * 0.0053) * 13 + Math.sin(p * 0.0131) * 6) * a, oy = (Math.sin(p * 0.0089) * 8 + Math.sin(p * 0.019) * 4) * a;
+  let sx;
+  if (bf.mode === 0) { bf.fp += dt * 0.03 * sp; sx = reduced ? 0.8 : 0.18 + 0.82 * Math.abs(Math.cos(bf.fp)); }
+  else { bf.rp += dt * 0.0035 * sp; sx = reduced ? 0.7 : 0.3 + 0.55 * (0.5 + 0.5 * Math.cos(bf.rp)); }
+  const zz = Math.max(0, Math.min(1, (bf.y - brookTop) / (h - brookTop))), k = (bf.big ? 1.1 : 0.85) * (0.75 + 0.5 * zz);
+  c.save(); c.translate(bf.x + ox, bf.y + oy); c.rotate(bf.lean); c.scale(k, k);
+  for (let sg = -1; sg <= 1; sg += 2) {
+    c.save(); c.scale(sg * sx, 1);
+    c.fillStyle = 'rgba(236,234,212,0.92)'; c.strokeStyle = 'rgba(84,98,112,0.55)'; c.lineWidth = 0.6;
+    c.beginPath(); c.ellipse(3.4, -2.4, 4.4, 3, -0.45, 0, 7); c.fill(); c.stroke();
+    c.beginPath(); c.ellipse(2.4, 2.5, 3, 2.4, 0.5, 0, 7); c.fill(); c.stroke();
+    c.fillStyle = 'rgba(160,196,228,0.5)'; c.beginPath(); c.ellipse(1.6, -0.6, 1.8, 1.5, 0, 0, 7); c.fill();
+    c.restore();
+  }
+  c.fillStyle = 'rgba(38,42,54,0.9)'; c.beginPath(); c.ellipse(0, 0, 0.9, 3.4, 0, 0, 7); c.fill();
+  c.strokeStyle = 'rgba(38,42,54,0.7)'; c.lineWidth = 0.5;
+  c.beginPath(); c.moveTo(-0.3, -3); c.lineTo(-1.8, -6); c.moveTo(0.3, -3); c.lineTo(1.8, -6); c.stroke();
+  c.restore();
+}
+
+function pickDf() {
+  const M = main.n - 1;
+  for (let tries = 0; tries < 5; tries++) {
+    const i = Math.round(M * (0.8 + Math.random() * 0.19));
+    const x = Math.max(12, Math.min(w - 12, main.X[i] + (Math.random() - 0.5) * main.W[i] * 0.5)), y = Math.min(h - 14, main.Y[i] + (Math.random() - 0.5) * 10);
+    df.tx = x; df.ty = y;
+    if (Math.hypot(x - df.x, y - df.y) > 90) break;
+  }
+  df.ang = Math.atan2(df.ty - df.y, df.tx - df.x);
+}
+
+function drawDragonfly(dt) {
+  const sp = reduced ? 0.3 : 1;
+  df.p += dt * sp;
+  let jx = 0, jy = 0;
+  if (df.mode === 0) {
+    const dx = df.tx - df.x, dy = df.ty - df.y, d = Math.hypot(dx, dy) || 1;
+    const v = Math.min(d, Math.min(0.5, 0.05 + d * 0.02) * dt * sp);
+    df.x += dx / d * v; df.y += dy / d * v;
+    if (d < 2) { df.mode = 1; df.wait = 700 + Math.random() * 1800; }
+  } else {
+    jx = Math.sin(df.p * 0.05) * 1.1 + Math.sin(df.p * 0.017) * 2; jy = Math.sin(df.p * 0.043) * 1 + Math.sin(df.p * 0.021) * 1.5;
+    df.wait -= dt * sp; if (df.wait <= 0) { df.mode = 0; pickDf(); }
+  }
+  const zz = Math.max(0, Math.min(1, (df.y - brookTop) / (h - brookTop))), k = (w < 620 ? 0.8 : 1) * (0.7 + 0.5 * zz);
+  const px = df.x + jx, py = df.y + jy;
+  c.fillStyle = 'rgba(2,14,24,0.14)'; c.beginPath(); c.ellipse(px + 5 * k, py + 13 * k, 8 * k, 2.4 * k, 0, 0, 7); c.fill();
+  c.save(); c.translate(px, py); c.rotate(df.ang); c.scale(k, k);
+  c.fillStyle = 'rgba(214,242,250,0.2)'; c.strokeStyle = 'rgba(214,242,250,0.35)'; c.lineWidth = 0.4;
+  const pass = reduced ? 1 : 2;
+  for (let q = 0; q < pass; q++) {
+    const jit = reduced ? 0 : Math.sin(df.p * 0.17 + q * 2.4) * 0.16, fl = reduced ? 0 : Math.sin(df.p * 0.11 + q) * 0.1;
+    for (let sg = -1; sg <= 1; sg += 2) {
+      c.save(); c.rotate(sg * (1.72 + jit + fl)); c.beginPath(); c.ellipse(6, 0, 6.5, 1.25, 0, 0, 7); c.fill(); if (q === 0) c.stroke(); c.restore();
+      c.save(); c.translate(-1.6, 0); c.rotate(sg * (1.98 - jit + fl)); c.beginPath(); c.ellipse(5.5, 0, 6, 1.35, 0, 0, 7); c.fill(); c.restore();
+    }
+  }
+  c.lineCap = 'round'; c.strokeStyle = 'rgba(110,206,224,0.95)'; c.lineWidth = 1.5;
+  c.beginPath(); c.moveTo(-2, 0); c.lineTo(-15, 0); c.stroke();
+  c.strokeStyle = 'rgba(30,80,110,0.55)'; c.lineWidth = 1.6;
+  c.beginPath(); c.moveTo(-6, 0); c.lineTo(-6.7, 0); c.moveTo(-9.5, 0); c.lineTo(-10.2, 0); c.moveTo(-13, 0); c.lineTo(-13.7, 0); c.stroke();
+  c.fillStyle = 'rgba(150,230,238,0.97)'; c.beginPath(); c.arc(0, 0, 2, 0, 7); c.fill();
+  c.fillStyle = 'rgba(210,246,250,0.97)'; c.beginPath(); c.arc(2.8, 0, 1.5, 0, 7); c.fill();
+  c.restore();
+}
+
+// One dark soaring bird, far off, seen from below: broad deep wings held in a shallow V, a fanned tail, and
+// separated "fingers" at each tip. The span narrows a little as it turns across the view.
+const FT = [[1.0, -0.19, 0.93, -0.12], [0.985, -0.1, 0.915, -0.04], [0.92, -0.02, 0.85, 0.03], [0.82, 0.05, 0.75, 0.09]];
+function eagleWing(S) {
+  c.beginPath(); c.moveTo(0, -0.03 * S);
+  c.quadraticCurveTo(0.5 * S, -0.11 * S, S, -0.19 * S);
+  for (let k = 0; k < 4; k++) {
+    const f = FT[k];
+    if (k) c.lineTo(f[0] * S, f[1] * S);
+    c.lineTo(f[2] * S - 0.02 * S, f[3] * S + 0.06 * S);   // the notch between feathers
+  }
+  c.quadraticCurveTo(0.5 * S, 0.14 * S, 0.12 * S, 0.17 * S);
+  c.lineTo(0, 0.13 * S); c.closePath(); c.fill();
+  c.strokeStyle = 'rgba(200,218,232,0.5)'; c.lineWidth = Math.max(0.7, S * 0.055);
+  c.beginPath();
+  for (let k = 0; k < 4; k++) { const f = FT[k]; c.moveTo(f[0] * S - 0.05 * S, f[1] * S + 0.045 * S); c.lineTo(f[0] * S, f[1] * S); }
+  c.stroke();
+}
+
+function drawEagle(dt) {
+  eagle.p += dt * (reduced ? 0.25 : 1);
+  const p = eagle.p, a = p * 0.00016;
+  const cx = w * (0.5 + 0.34 * Math.sin(p * 0.000021)), cy = h * (0.17 + 0.04 * Math.sin(p * 0.000033));
+  const rx = w * (0.07 + 0.05 * (0.5 + 0.5 * Math.sin(p * 0.00005))), ry = h * 0.035;
+  const ca = Math.cos(a), sa = Math.sin(a), S = Math.max(8.5, Math.min(16, w * 0.014));
+  const x = cx + ca * rx, y = cy + sa * ry;
+  c.save(); c.translate(x, y); c.rotate(sa * 0.1);
+  c.fillStyle = 'rgba(8,20,34,0.88)';
+  c.save(); c.scale(0.6 + 0.4 * Math.abs(ca), 1);
+  c.save(); eagleWing(S); c.scale(-1, 1); eagleWing(S); c.restore();
+  c.restore();
+  c.fillStyle = 'rgba(8,20,34,0.93)';
+  c.beginPath(); c.ellipse(0, 0.02 * S, 0.075 * S, 0.21 * S, 0, 0, 7); c.fill();
+  c.beginPath(); c.moveTo(-0.06 * S, 0.17 * S); c.lineTo(-0.13 * S, 0.44 * S); c.quadraticCurveTo(0, 0.5 * S, 0.13 * S, 0.44 * S); c.lineTo(0.06 * S, 0.17 * S); c.closePath(); c.fill();
+  c.beginPath(); c.arc(-sa * 0.04 * S, -0.22 * S, 0.065 * S, 0, 7); c.fill();
+  c.restore();
 }
 
 function startDrop(k) {
@@ -437,6 +653,9 @@ export default {
 
     c.fillStyle = skyGrad; c.fillRect(0, 0, w, h);
 
+    const dtc = Math.min(dt, 50);
+    c.save(); c.translate(camX * 0.1, 0); drawEagle(dtc); c.restore();
+
     // Back layers with parallax; front layer with full camera.
     for (let i = 0; i < 3; i++) {
       c.save(); c.translate(camX * LAYERS[i].par, 0);
@@ -453,6 +672,7 @@ export default {
     c.restore();
 
     drawBrook(dt, b);
+    drawFlowers(b);
 
     // Melt sparkles drifting off the snow on the exhale.
     for (let i = 0; i < MAX_SPARK; i++) {
@@ -474,6 +694,8 @@ export default {
       c.fillStyle = '#dffbff';
       c.beginPath(); c.arc(drop.x, drop.y, dr, 0, Math.PI * 2); c.fill();
     }
+    drawDragonfly(dtc);
+    drawButterfly(dtc);
     c.restore();
     drawTaps(c, dt);
   },
