@@ -301,7 +301,7 @@ function buildLife() {
       for (let j = 0; j < rocks.length && !bad; j++) if (Math.hypot(x - rocks[j].x, (y - rocks[j].y) * 1.6) < rocks[j].r * 1.6) bad = true;
       if (bad) continue;
       const zz = (y - brookTop) / (h - brookTop);
-      flowers.push({ x, y, sc: (0.3 + 0.95 * zz) * (phone ? 0.8 : 1) * (0.85 + r() * 0.3), ph: r() * 6.28, spr: fSprites[Math.floor(r() * 16)] });
+      flowers.push({ x, y, sc: 2 * (0.3 + 0.95 * zz) * (phone ? 0.8 : 1) * (0.85 + r() * 0.3), ph: r() * 6.28, spr: fSprites[Math.floor(r() * 16)] });
     }
   }
   flowers.sort((a, b2) => a.y - b2.y);
@@ -329,7 +329,7 @@ function pickBf() {
   const n = bfAnch.length; if (!n) return;
   const f = bfAnch[(Math.random() * n) | 0];
   bf.rest = Math.random() < 0.5;
-  bf.tx = f.x + (bf.rest ? 0 : (Math.random() - 0.5) * 70); bf.ty = f.y - f.sc * 30 - (bf.rest ? 0 : 6 + Math.random() * 26);
+  bf.tx = f.x + (bf.rest ? 0 : (Math.random() - 0.5) * 70); bf.ty = f.y - f.sc * 30 - (bf.rest ? 0 : 12 + Math.random() * 40);
 }
 
 function drawButterfly(dt) {
@@ -351,7 +351,7 @@ function drawButterfly(dt) {
   let sx;
   if (bf.mode === 0) { bf.fp += dt * 0.03 * sp; sx = reduced ? 0.8 : 0.18 + 0.82 * Math.abs(Math.cos(bf.fp)); }
   else { bf.rp += dt * 0.0035 * sp; sx = reduced ? 0.7 : 0.3 + 0.55 * (0.5 + 0.5 * Math.cos(bf.rp)); }
-  const zz = Math.max(0, Math.min(1, (bf.y - brookTop) / (h - brookTop))), k = (bf.big ? 1.1 : 0.85) * (0.75 + 0.5 * zz);
+  const zz = Math.max(0, Math.min(1, (bf.y - brookTop) / (h - brookTop))), k = 2 * (bf.big ? 1.1 : 0.85) * (0.75 + 0.5 * zz);
   c.save(); c.translate(bf.x + ox, bf.y + oy); c.rotate(bf.lean); c.scale(k, k);
   for (let sg = -1; sg <= 1; sg += 2) {
     c.save(); c.scale(sg * sx, 1);
@@ -391,7 +391,7 @@ function drawDragonfly(dt) {
     jx = Math.sin(df.p * 0.05) * 1.1 + Math.sin(df.p * 0.017) * 2; jy = Math.sin(df.p * 0.043) * 1 + Math.sin(df.p * 0.021) * 1.5;
     df.wait -= dt * sp; if (df.wait <= 0) { df.mode = 0; pickDf(); }
   }
-  const zz = Math.max(0, Math.min(1, (df.y - brookTop) / (h - brookTop))), k = (w < 620 ? 0.8 : 1) * (0.7 + 0.5 * zz);
+  const zz = Math.max(0, Math.min(1, (df.y - brookTop) / (h - brookTop))), k = 2 * (w < 620 ? 0.8 : 1) * (0.7 + 0.5 * zz);
   const px = df.x + jx, py = df.y + jy;
   c.fillStyle = 'rgba(2,14,24,0.14)'; c.beginPath(); c.ellipse(px + 5 * k, py + 13 * k, 8 * k, 2.4 * k, 0, 0, 7); c.fill();
   c.save(); c.translate(px, py); c.rotate(df.ang); c.scale(k, k);
@@ -437,7 +437,7 @@ function drawEagle(dt) {
   const p = eagle.p, a = p * 0.00016;
   const cx = w * (0.5 + 0.34 * Math.sin(p * 0.000021)), cy = h * (0.17 + 0.04 * Math.sin(p * 0.000033));
   const rx = w * (0.07 + 0.05 * (0.5 + 0.5 * Math.sin(p * 0.00005))), ry = h * 0.035;
-  const ca = Math.cos(a), sa = Math.sin(a), S = Math.max(8.5, Math.min(16, w * 0.014));
+  const ca = Math.cos(a), sa = Math.sin(a), S = Math.max(17, Math.min(32, w * 0.028));
   const x = cx + ca * rx, y = cy + sa * ry;
   c.save(); c.translate(x, y); c.rotate(sa * 0.1);
   c.fillStyle = 'rgba(8,20,34,0.88)';
