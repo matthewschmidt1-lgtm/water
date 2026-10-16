@@ -369,7 +369,7 @@ if (cycle) {
     const c = lensCtx;
     const tick = (now) => {
       const t = (now - t0) / 1000, dt = Math.min(0.05, (now - last) / 1000); last = now;
-      if (t > tEnd) { c.clearRect(0, 0, W, H); w2.clearRect(0, 0, W, H); wc.remove(); lens.remove(); lens = null; lensCtx = null; return; }
+      if (t > tEnd) { c.clearRect(0, 0, W, H); w2.clearRect(0, 0, W, H); wc.remove(); lens.remove(); lens = null; lensCtx = null; document.body.classList.add('doors-open'); return; }
       const w = t - tW;
       if (w > -0.05 && w < 6.2 * m) {
         w2.clearRect(0, 0, W, H);
@@ -552,7 +552,6 @@ if (cycle) {
     splashes.push({ x, t, big: true, huge: true }); splashes.push({ x, t: t + 0.25, big: true, huge: true });
     audio.plip(0.35); audio.pour?.(1.6);
     setTimeout(wetScreen, 260);   // the spray takes a moment to reach the glass
-    setTimeout(() => document.body.classList.add('doors-open'), 3200);   // once the water has settled, the two doors appear
   }
 
   const frame = (now) => {
@@ -726,7 +725,7 @@ if (cycle) {
   }
   function play() {
     clearStage();
-    if (reduced) setTimeout(() => document.body.classList.add('doors-open'), 4000);
+    if (reduced) setTimeout(() => document.body.classList.add('doors-open'), 6000);
     sizeCycle(); started = true; t0 = performance.now(); cycle.classList.add('is-visible');
     if (!running) { running = true; requestAnimationFrame(frame); }
   }
