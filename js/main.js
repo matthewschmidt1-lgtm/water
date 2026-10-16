@@ -295,9 +295,14 @@ if (cycle) {
     // off-screen) and sweeps through negative y, i.e. angle DECREASING by wTrav (~123 deg) to aTop, up and over to the left.
     // Stroke timing (seconds after wipers start): out 0-1.15, hold at top to 1.5, back to 2.65, rest to 2.9, out to 4.05,
     // hold to 4.4, back to 5.55; then they fold below the edge by 5.9.
-    const tW = 2.6, wEnd = tW + 5.9, tEnd = wEnd + 2.6;
+    // On phones (W < 820) the arms are shorter, thicker and slower so they read on a small bright screen.
+    // m stretches every stroke/hold duration; the base timings below are the desktop ones before m.
+    const phone = W < 820, m = phone ? 1.25 : 1.1;
+    const tW = 2.6, wEnd = tW + 5.9 * m, tC = tW + 6.2 * m;   // tC: the car sequence starts as the wipers finish
+    const carLen = 11.8, tEnd = tC + carLen;
     const aRest = 0.04, wTrav = 2.15, aTop = aRest - wTrav;
-    const pyW = H + 10, armL = H * 0.97 + 10, px0 = W * 0.3, px1 = W * 0.7;
+    const pyW = H + 10, armL = H * (phone ? 0.62 : 0.97) + 10, px0 = W * 0.3, px1 = W * 0.7;
+    const bladeW = phone ? 7 : 5.5, armW = phone ? 4 : 3, capR = phone ? 9.5 : 8;
     const wc = document.createElement('canvas');
     wc.style.cssText = 'position:fixed;inset:0;width:100%;height:100%;pointer-events:none;z-index:121';
     wc.width = W * dpr; wc.height = H * dpr; document.body.appendChild(wc);
@@ -305,6 +310,7 @@ if (cycle) {
     const ease = (u) => u <= 0 ? 0 : u >= 1 ? 1 : 0.5 - 0.5 * Math.cos(Math.PI * u);
     const wipeP = (w) => {
       if (w < 0) return 0;
+      w /= m;   // work in unstretched stroke time
       if (w < 1.15) return ease(w / 1.15);
       if (w < 1.5) return 1;
       if (w < 2.65) return 1 - ease((w - 1.5) / 1.15);
@@ -321,19 +327,54 @@ if (cycle) {
         const ang = aTop - 0.05 - Math.random() * 0.04, rad = armL * (0.45 + Math.random() * 0.5);
         const bx = Math.min(W - 8, Math.max(8, px + Math.cos(ang) * rad)), by = pyW + Math.sin(ang) * rad;
         if (by < 8 || by > H - 8) continue;
-        drops.push({ x: bx, y: by, r: 2.4 + Math.random() * 2.2, vy: 0, run: false, at: 0, wob: 0, born: tW + (j ? 4.05 : 1.15) + 0.1 + Math.random() * 0.2 });
+        drops.push({ x: bx, y: by, r: 2.4 + Math.random() * 2.2, vy: 0, run: false, at: 0, wob: 0, born: tW + (j ? 4.05 : 1.15) * m + 0.1 + Math.random() * 0.2 });
       }
     }
+    // ---- the car: sprites and gradients are built once here; the frame loop only blits them ----
+    const mk = (cw, ch, fn) => { const k = document.createElement('canvas'); k.width = cw; k.height = ch; fn(k.getContext('2d'), cw, ch); return k; };
+    const radial = (c0, rgb, stops) => mk(c0, c0, (g, sz) => {
+      const r = sz / 2, gr = g.createRadialGradient(r, r, 0, r, r, r);
+      for (const st of stops) gr.addColorStop(st[0], 'rgba(' + rgb + ',' + st[1] + ')');
+      g.fillStyle = gr; g.fillRect(0, 0, sz, sz);
+    });
+    const poolSpr = radial(256, '255,244,214', [[0, 0.9], [0.3, 0.5], [0.65, 0.14], [1, 0]]);   // warm headlight pool
+    const revSpr = radial(128, '238,247,255', [[0, 0.95], [0.25, 0.5], [0.6, 0.12], [1, 0]]);    // pale reverse light
+    const redSpr = radial(64, '255,52,40', [[0, 1], [0.22, 0.6], [0.55, 0.14], [1, 0]]);         // tail light
+    const washSpr = mk(4, 256, (g, cw, ch) => {
+      const gr = g.createLinearGradient(0, 0, 0, ch);
+      gr.addColorStop(0, 'rgba(255,238,200,0)'); gr.addColorStop(1, 'rgba(255,238,200,0.2)');
+      g.fillStyle = gr; g.fillRect(0, 0, cw, ch);
+    });
+    const coneSpr = mk(256, 128, (g, cw, ch) => {   // apex at left-middle, opening to the right, soft along its edges
+      const gr = g.createLinearGradient(0, 0, cw, 0);
+      gr.addColorStop(0, 'rgba(255,238,196,0.34)'); gr.addColorStop(1, 'rgba(255,238,196,0)');
+      g.fillStyle = gr; g.beginPath(); g.moveTo(0, 61); g.lineTo(cw, 0); g.lineTo(cw, ch); g.lineTo(0, 67); g.closePath(); g.fill();
+      g.globalCompositeOperation = 'destination-in';
+      const vg = g.createLinearGradient(0, 0, 0, ch);
+      vg.addColorStop(0, 'rgba(0,0,0,0)'); vg.addColorStop(0.5, 'rgba(0,0,0,1)'); vg.addColorStop(1, 'rgba(0,0,0,0)');
+      g.fillStyle = vg; g.fillRect(0, 0, cw, ch);
+    });
+    const carSpr = mk(256, 96, (g) => {   // a low car seen from behind: body, cabin, wheels; light housings at (30,58) and (226,58)
+      g.fillStyle = '#030507';
+      g.beginPath(); g.moveTo(10, 84); g.lineTo(8, 60); g.quadraticCurveTo(10, 46, 36, 44); g.lineTo(220, 44); g.quadraticCurveTo(246, 46, 248, 60); g.lineTo(246, 84); g.closePath(); g.fill();
+      g.beginPath(); g.moveTo(46, 46); g.lineTo(72, 12); g.quadraticCurveTo(128, 8, 184, 12); g.lineTo(210, 46); g.closePath(); g.fill();
+      g.fillRect(22, 78, 36, 14); g.fillRect(198, 78, 36, 14);
+      g.strokeStyle = 'rgba(170,196,214,0.3)'; g.lineWidth = 1.6; g.lineCap = 'round';   // a faint rim of sky along the roof and shoulders
+      g.beginPath(); g.moveTo(76, 13); g.quadraticCurveTo(128, 9, 180, 13); g.stroke();
+      g.beginPath(); g.moveTo(14, 52); g.quadraticCurveTo(16, 46, 38, 45); g.lineTo(218, 45); g.quadraticCurveTo(240, 46, 242, 52); g.stroke();
+    });
+    // headlights flicker on: a ramp with a few stutters in the first 0.4 s
+    const lightOn = (q) => q <= 0 ? 0 : q >= 0.4 ? 1 : ease(q / 0.4) * (0.5 + 0.5 * Math.abs(Math.sin(q * 67)));
     let pa = aRest, pp = 0;
     const t0 = performance.now(); let last = t0;
     const c = lensCtx;
     const tick = (now) => {
       const t = (now - t0) / 1000, dt = Math.min(0.05, (now - last) / 1000); last = now;
-      if (t > tEnd) { c.clearRect(0, 0, W, H); wc.remove(); return; }
+      if (t > tEnd) { c.clearRect(0, 0, W, H); w2.clearRect(0, 0, W, H); wc.remove(); lens.remove(); lens = null; lensCtx = null; return; }
       const w = t - tW;
-      if (w > -0.05 && w < 6.2) {
+      if (w > -0.05 && w < 6.2 * m) {
         w2.clearRect(0, 0, W, H);
-        const rise = w < 0 ? 0 : w < 0.35 ? ease(w / 0.35) : w < 5.55 ? 1 : w < 5.9 ? 1 - ease((w - 5.55) / 0.35) : 0;
+        const rise = w < 0 ? 0 : w < 0.35 ? ease(w / 0.35) : w < 5.55 * m ? 1 : w < 5.9 * m ? 1 - ease((w - 5.55 * m) / (0.35 * m)) : 0;
         const p = wipeP(w), vel = dt > 0 ? Math.abs(p - pp) / dt : 0;
         const dir = p >= pp ? -1 : 1;   // -1: angle decreasing (outward stroke); +1: returning
         const a = aRest - p * wTrav + Math.sin(w * 53) * Math.min(1, vel * 0.9) * (dir > 0 ? 0.009 : 0.006);   // judder
@@ -376,18 +417,86 @@ if (cycle) {
               w2.beginPath(); w2.moveTo(px + Math.cos(ah) * armL * 0.3, py + Math.sin(ah) * armL * 0.3); w2.lineTo(px + Math.cos(ah) * armL, py + Math.sin(ah) * armL); w2.stroke();
             }
             w2.save(); w2.translate(px, py); w2.rotate(a); w2.lineCap = 'round';
-            w2.shadowColor = 'rgba(0,0,0,0.35)'; w2.shadowBlur = 9; w2.shadowOffsetY = 4;
-            w2.strokeStyle = '#121518'; w2.lineWidth = 5.5;                       // rubber blade
+            w2.shadowColor = phone ? 'rgba(0,0,0,0.5)' : 'rgba(0,0,0,0.35)'; w2.shadowBlur = phone ? 12 : 9; w2.shadowOffsetY = phone ? 5 : 4;
+            w2.strokeStyle = '#121518'; w2.lineWidth = bladeW;                    // rubber blade
             w2.beginPath(); w2.moveTo(armL * 0.28, 0); w2.lineTo(armL, 0); w2.stroke();
-            w2.strokeStyle = '#4b5158'; w2.lineWidth = 3;                         // metal arm
+            w2.strokeStyle = phone ? '#59616a' : '#4b5158'; w2.lineWidth = armW;                         // metal arm
             w2.beginPath(); w2.moveTo(0, 0); w2.lineTo(armL * 0.62, 0); w2.stroke();
             w2.shadowColor = 'transparent'; w2.shadowBlur = 0; w2.shadowOffsetY = 0;
-            w2.strokeStyle = 'rgba(255,255,255,0.2)'; w2.lineWidth = 0.8;
-            w2.beginPath(); w2.moveTo(0, -0.9); w2.lineTo(armL * 0.62, -0.9); w2.stroke();
-            w2.fillStyle = '#2f343a'; w2.beginPath(); w2.arc(0, 0, 8, 0, Math.PI * 2); w2.fill();
+            w2.strokeStyle = phone ? 'rgba(255,255,255,0.36)' : 'rgba(255,255,255,0.2)'; w2.lineWidth = phone ? 1.2 : 0.8;
+            w2.beginPath(); w2.moveTo(0, phone ? -1.3 : -0.9); w2.lineTo(armL * 0.62, phone ? -1.3 : -0.9); w2.stroke();
+            w2.fillStyle = '#2f343a'; w2.beginPath(); w2.arc(0, 0, capR, 0, Math.PI * 2); w2.fill();
             w2.restore();
           }
         }
+      }
+      // ---- the car: the visitor is inside it, looking out over the lake ----
+      const cT = t - tC;
+      if (cT >= 0) {
+        w2.clearRect(0, 0, W, H);
+        w2.globalCompositeOperation = 'source-over'; w2.globalAlpha = 1;
+        // pulling back from the shore: the page dims to 25%, then lifts again as the view changes
+        const dim = cT < 1.8 ? 0 : cT < 4.9 ? 0.25 * ease((cT - 1.8) / 3.1) : cT < 6.1 ? 0.25 : 0.25 * (1 - ease((cT - 6.1) / 1.6));
+        if (dim > 0.002) { w2.globalAlpha = dim; w2.fillStyle = '#02060b'; w2.fillRect(0, 0, W, H); }
+        if (cT < 6.1) {
+          w2.globalCompositeOperation = 'lighter';
+          // a. headlights: two warm pools on the water ahead, a wash across the lower third, faint cones from the bottom corners
+          const sR = ease((cT - 1.8) / 3.1);              // reverse progress 0..1 (1.8 s to 4.9 s)
+          const sW = ease((cT - 4.9) / 1.2);              // drive-off swing 0..1 (4.9 s to 6.1 s)
+          const onL = lightOn(cT), onR = lightOn(cT - 0.09);
+          const sc = 1 - 0.55 * sR;                       // what they light is getting farther away
+          const sway = Math.sin(cT * 1.15) * W * 0.011 * ease((cT - 1.5) / 0.6);   // slow left-to-right sway
+          const shift = W * 0.05 * sR + sway + sW * W * 1.15;                      // the car turns a little while reversing, then swings away
+          const lx = W * (0.3 + 0.17 * sR) + shift, rx = W * (0.7 - 0.17 * sR) + shift;
+          const py = H * (0.8 - 0.07 * sR) + sW * H * 0.02;
+          const ab = (1 - 0.3 * sR) * (sW < 0.6 ? 1 : 1 - ease((sW - 0.6) / 0.4));
+          const prx = W * 0.27 * sc, pry = H * 0.1 * sc;
+          w2.globalAlpha = Math.min(onL, onR) * ab * (1 - 0.5 * sR);
+          w2.drawImage(washSpr, 0, H * 0.66, W, H * 0.34);
+          const ys = 1 - 0.5 * sR;                         // the cones narrow as the lights recede
+          for (let k = 0; k < 2; k++) {
+            const sx = k ? W * 0.94 : W * 0.06, tx = k ? rx : lx, on = k ? onR : onL;
+            const ang = Math.atan2(py - H, tx - sx), ln = Math.sqrt((tx - sx) * (tx - sx) + (py - H) * (py - H)) * 1.25;
+            w2.globalAlpha = on * ab * 0.85;
+            w2.save(); w2.translate(sx, H); w2.rotate(ang); w2.scale(ln / 256, ln / 256 * 1.1 * ys);
+            w2.drawImage(coneSpr, 0, -64); w2.restore();
+          }
+          w2.globalAlpha = onL * ab * 0.8; w2.drawImage(poolSpr, lx - prx, py - pry, prx * 2, pry * 2);
+          w2.globalAlpha = onR * ab * 0.8; w2.drawImage(poolSpr, rx - prx, py - pry, prx * 2, pry * 2);
+          // b. reverse: a pale double-blink at the corners, then a dim steady glow while we back up
+          const rf = cT < 1.5 ? 0 : cT < 1.62 ? 1 : cT < 1.68 ? 0.2 : cT < 1.8 ? 1 : cT < 4.9 ? 0.22 : cT < 5.4 ? 0.22 * (1 - (cT - 4.9) / 0.5) : 0;
+          if (rf > 0.001) {
+            const rr = Math.min(W, H) * 0.16 * (rf > 0.5 ? 1.5 : 1);
+            w2.globalAlpha = rf * 0.8;
+            w2.drawImage(revSpr, W * 0.08 - rr, H * 0.95 - rr, rr * 2, rr * 2);
+            w2.drawImage(revSpr, W * 0.92 - rr, H * 0.95 - rr, rr * 2, rr * 2);
+          }
+        }
+        // c. outside view: a small car driving away over the lake road toward the far shore (5 s)
+        if (cT > 6.4 && cT < 11.5) {
+          const k = Math.min(1, (cT - 6.4) / 5), kk = Math.pow(k, 0.85);
+          const sc1 = 1 / (1 + 20 * kk), f = (sc1 - 1 / 21) / (1 - 1 / 21);   // f: 1 close .. 0 far, linear in apparent size, so perspective holds
+          const fo = (k < 0.78 ? 1 : 1 - ease((k - 0.78) / 0.22)) * ease((cT - 6.4) / 0.5);
+          const cw = Math.min(W * 0.26, 170) * sc1, chh = cw * 0.375;
+          const cx = W * (0.5 + 0.1 * (1 - f)) + Math.sin(cT * 2.3) * W * 0.006 * (0.3 + f);
+          const cy = H * (0.69 + 0.21 * f);
+          w2.globalCompositeOperation = 'source-over'; w2.globalAlpha = fo;
+          w2.save(); w2.translate(cx, cy); w2.rotate(Math.sin(cT * 2.3 + 1) * 0.02);
+          w2.drawImage(carSpr, -cw * 0.5, -chh, cw, chh); w2.restore();
+          w2.globalCompositeOperation = 'lighter';
+          w2.globalAlpha = 0.28 * fo;   // faint headlight glow on the road ahead of it
+          w2.drawImage(poolSpr, cx - cw * 1.6, cy - chh - cw * 0.35, cw * 3.2, cw * 0.8);
+          const ty = cy - chh * 0.396, tr = Math.max(1.6, cw * 0.16);
+          for (let q = 0; q < 2; q++) {
+            const tx = cx + (q ? 1 : -1) * cw * 0.383, ph = q * 2.1;
+            const tw = 0.7 + 0.3 * Math.sin(cT * 15 + ph) * (0.5 + 0.5 * Math.sin(cT * 4.1 + ph * 2));
+            w2.globalAlpha = fo * tw;
+            w2.drawImage(redSpr, tx - tr * 2.4, ty - tr * 2.4, tr * 4.8, tr * 4.8);
+            w2.globalAlpha = fo * tw * 0.18;   // a thin red reflection on the water below
+            w2.drawImage(redSpr, tx - tr * 1.2, ty + tr * 0.5, tr * 2.4, tr * 6);
+          }
+        }
+        w2.globalCompositeOperation = 'source-over'; w2.globalAlpha = 1;
       }
       // everything on the glass slowly dries; what has run leaves a thinning streak behind it
       if (t > 1.2) { c.globalCompositeOperation = 'destination-out'; c.fillStyle = `rgba(0,0,0,${t > 5 ? 0.09 : 0.012})`; c.fillRect(0, 0, W, H); }

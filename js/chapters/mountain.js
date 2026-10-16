@@ -11,6 +11,8 @@ const LAYERS = [
   { base: 0.72, amp: 0.07, peakH: 0.10, px: 0.9,  seed: 37, par: 0.75, color: '#173a5c' },
   { base: 0.84, amp: 0.05, peakH: 0.5,  px: 0.66, seed: 53, par: 1.0,  color: '#0a2038' },
 ];
+// the river is different on every load
+const RSEED = ((Date.now() ^ Math.floor(Math.random() * 4294967296)) >>> 0) || 1;
 const STAGES = ['snow', 'melt', 'stream', 'creek', 'river'];
 
 let c, w, h, reduced, audio;
@@ -183,21 +185,39 @@ function buildBrook(front) {
   const phone = w < 620;
   const maxW = w * (phone ? 0.84 : 0.7);
   const ytop = snowY + (h - snowY) * 0.2, yend = h + 12;
-  const M = 220, r = rng(7);
-  const ph0 = r() * 6.28, ph1 = r() * 6.28, ph2 = r() * 6.28, startX = peakX - w * 0.01;
+  const M = 220, r = rng(RSEED);
+  const ph0 = r() * 6.28, ph1 = r() * 6.28, ph2 = r() * 6.28, ph3 = r() * 6.28, ph4 = r() * 6.28, startX = peakX - w * 0.01;
+  const f1 = 1.7 + r() * 1.0, f2 = 1.13 + r() * 0.8, fw = 0.5 + r() * 0.9;   // two unrelated meander frequencies and a slow warp of the first
+  // bend amplitude changes along the length: a tight bend or two, and a long lazy reach
+  const bumps = [];
+  const nb = 2 + Math.floor(r() * 2);
+  for (let k = 0; k < nb; k++) bumps.push({ c: 0.12 + r() * 0.7, wd: 0.05 + r() * 0.07, a: k === 0 ? 0.5 + r() * 0.4 : (r() < 0.55 ? -(0.3 + r() * 0.25) : 0.35 + r() * 0.4) });
   const X = new Float32Array(M + 1), Y = new Float32Array(M + 1), W = new Float32Array(M + 1);
   for (let i = 0; i <= M; i++) {
     const s = i / M;
     const base = startX + (w / 2 - startX) * Math.pow(s, 0.8);
     const amp = w * ((phone ? 0.028 : 0.034) + (phone ? 0.1 : 0.15) * Math.pow(s, 1.15));
-    const phase = ph0 + 6.283 * 2.1 * Math.pow(s, 0.62);   // quick turns up high, long sweeps where it is wide
-    // a mountain stream never runs straight: a main meander with a smaller, slower one riding on it
-    const wander = Math.sin(phase) + 0.3 * Math.sin(phase * 1.7 + ph1) + 0.1 * (1 - s) * Math.sin(phase * 3.3 + ph2);
-    X[i] = base + amp * wander * (1 - smooth(0.7, 1, s)) * smooth(0, 0.04, s);   // the last reach turns and comes straight at you
+    let env = 0.85;
+    for (const bp of bumps) env += bp.a * (1 - 0.65 * bp.c) * Math.exp(-(((s - bp.c) / bp.wd) ** 2));
+    env = Math.max(0.4, Math.min(1.3, env));
+    const phase = ph0 + 6.283 * f1 * Math.pow(s, 0.62) + 0.9 * Math.sin(6.283 * fw * s + ph4);   // uneven spacing: quick turns up high, long sweeps lower
+    const phase2 = ph3 + 6.283 * f2 * Math.pow(s, 0.85);
+    const wander = (Math.sin(phase) + 0.45 * Math.sin(phase2) + 0.28 * Math.sin(phase * 1.7 + ph1) + 0.1 * (1 - s) * Math.sin(phase * 3.3 + ph2)) / 1.25;
+    let xx = base + amp * env * wander * (1 - smooth(0.7, 1, s)) * smooth(0, 0.04, s);   // the last reach turns and comes straight at you
+    const m = (7 + (maxW - 7) * Math.pow(s, 1.35)) * 0.32 + 10;
+    X[i] = Math.max(m, Math.min(w - m, xx));
     // a little slower on the high slope, then it runs out toward you
     Y[i] = ytop + (0.6 * s + 0.4 * Math.pow(s, 1.3)) * (yend - ytop);
-    // it widens early and keeps widening; the banks pinch and swell the way real ones do
-    W[i] = (7 + (maxW - 7) * Math.pow(s, 1.35)) * (1 + 0.13 * Math.sin(s * 31 + ph1) + 0.07 * Math.sin(s * 71 + ph2));
+  }
+  // tightness of the bend at each sample (second difference of the path), smoothed along the river
+  const cv = new Float32Array(M + 1);
+  for (let i = 1; i < M; i++) cv[i] = Math.abs(X[i + 1] - 2 * X[i] + X[i - 1]) / Math.max(4, w * 0.004 + Math.pow(i / M, 1.2) * w * 0.02);
+  const cs = new Float32Array(M + 1);
+  for (let i = 0; i <= M; i++) { let a = 0, n = 0; for (let j = Math.max(0, i - 7); j <= Math.min(M, i + 7); j++) { a += cv[j]; n++; } cs[i] = a / n; }
+  for (let i = 0; i <= M; i++) {
+    const s = i / M, tight = Math.min(1, cs[i] * 1.1);
+    // narrower and quicker where it turns hard, wider in the straights; it widens early and keeps widening
+    W[i] = (7 + (maxW - 7) * Math.pow(s, 1.35)) * (1.18 - 0.4 * tight) * (1 + 0.1 * Math.sin(s * 31 + ph1) + 0.06 * Math.sin(s * 71 + ph2));
   }
   main = makeBranch(X, Y, W);
   brookTop = ytop;
@@ -241,8 +261,17 @@ const FPAL = {
   yel: ['#e6dc96', '#b89a3c'], wht: ['#e4ecef', '#c9b05a'], pnk: ['#c88ca2', '#e8d49a'], blu: ['#8da4dc', '#e4e8c0'],
 };
 const FMIX = [['yel'], ['wht'], ['pnk'], ['blu'], ['wht', 'yel'], ['pnk', 'wht'], ['blu', 'wht'], ['yel', 'pnk']];
-let fSprites = null, flowers = [], bfAnch = [];
-const bf = { x: 0, y: 0, tx: 0, ty: 0, mode: 0, wait: 0, rest: false, amp: 1, lean: 0, fp: 0, rp: 0, p: 0, big: false };
+let fSprites = null, flowers = [], bfAnch = [], beeAnch = [];
+const mkBf = (o) => Object.assign({ x: 0, y: 0, tx: 0, ty: 0, mode: 0, wait: 0, rest: false, amp: 1, lean: 0, fp: 0, rp: 0, p: 0, big: false, dip: false, nextDip: 10000 + Math.random() * 15000, hold: 0 }, o);
+// two butterflies share one drawing routine: a pale cabbage white and a small orange-brown one with its own rhythm
+const bfs = [
+  mkBf({ wing: 'rgba(236,234,212,0.92)', edge: 'rgba(84,98,112,0.55)', spot: 'rgba(160,196,228,0.5)', size: 1, speed: 1, flap: 1, wob: 1 }),
+  mkBf({ wing: 'rgba(204,126,62,0.92)', edge: 'rgba(52,30,18,0.7)', spot: 'rgba(250,226,170,0.55)', size: 0.78, speed: 1.18, flap: 1.35, wob: 1.4, p: 3100, wait: 1800 }),
+];
+const bee = { x: 0, y: 0, tx: 0, ty: 0, mode: 0, wait: 0, p: 0, ang: 0, f: null, dip: false, nextDip: 10000 + Math.random() * 15000, hold: 0, zig: 0 };
+const droplets = [], rings = [];
+for (let i = 0; i < 28; i++) droplets.push({ x: 0, y: 0, vx: 0, vy: 0, y0: 0, life: -1, r: 1 });
+for (let i = 0; i < 6; i++) rings.push({ x: 0, y: 0, t: -1, s: 1 });
 const df = { x: 0, y: 0, tx: 0, ty: 0, mode: 1, wait: 600, ang: 0.3, p: 0 };
 const eagle = { p: 4000 };
 
@@ -308,9 +337,18 @@ function buildLife() {
   bfAnch.length = 0;
   for (const f of flowers) if (f.y > h * 0.7) bfAnch.push(f);
   if (!bfAnch.length) for (const f of flowers) bfAnch.push(f);
-  bf.big = !phone;
-  const a0 = bfAnch[0];
-  bf.x = bf.tx = a0 ? a0.x : w * 0.3; bf.y = bf.ty = a0 ? a0.y - 30 : h * 0.85; bf.mode = 0; bf.rest = false;
+  bfs.forEach((bf, k) => {
+    bf.big = !phone;
+    const a0 = bfAnch[(k * 7) % Math.max(1, bfAnch.length)];
+    bf.x = bf.tx = a0 ? a0.x : w * 0.3; bf.y = bf.ty = a0 ? a0.y - 30 : h * 0.85; bf.mode = 0; bf.rest = false; bf.dip = false;
+  });
+  beeAnch.length = 0;
+  for (const f of flowers) if (f.y > h * 0.6) beeAnch.push(f);
+  if (!beeAnch.length) for (const f of flowers) beeAnch.push(f);
+  const b0 = beeAnch[beeAnch.length >> 1];
+  bee.x = bee.tx = b0 ? b0.x : w * 0.6; bee.y = bee.ty = b0 ? b0.y - 30 : h * 0.85; bee.mode = 0; bee.dip = false; bee.f = null; bee.wait = 0;
+  for (const d of droplets) d.life = -1;
+  for (const q of rings) q.t = -1;
   const i0 = Math.round(M * 0.9);
   df.x = df.tx = X[i0]; df.y = df.ty = Math.min(h - 14, Y[i0]); df.mode = 1; df.wait = 500;
 }
@@ -325,45 +363,150 @@ function drawFlowers(b) {
   }
 }
 
-function pickBf() {
+function pickBf(bf) {
   const n = bfAnch.length; if (!n) return;
   const f = bfAnch[(Math.random() * n) | 0];
   bf.rest = Math.random() < 0.5;
   bf.tx = f.x + (bf.rest ? 0 : (Math.random() - 0.5) * 70); bf.ty = f.y - f.sc * 30 - (bf.rest ? 0 : 12 + Math.random() * 40);
 }
 
-function drawButterfly(dt) {
-  const sp = reduced ? 0.3 : 1;
+// A spot on the river's lowest reach, inside the ribbon (like the dragonfly's).
+function pickWater(o) {
+  const M = main.n - 1, i = Math.round(M * (0.82 + Math.random() * 0.15));
+  o.tx = Math.max(14, Math.min(w - 14, main.X[i] + (Math.random() - 0.5) * main.W[i] * 0.5));
+  o.ty = Math.min(h - 16, main.Y[i] + (Math.random() - 0.5) * 8);
+}
+
+// The touch: a few droplets that arc up and fall, and a thin ring that spreads on the surface.
+function splash(x, y) {
+  const zz = Math.max(0, Math.min(1, (y - brookTop) / (h - brookTop))), sc = 0.7 + 0.6 * zz;
+  let n = 4 + ((Math.random() * 3) | 0);
+  for (const d of droplets) {
+    if (!n) break;
+    if (d.life >= 0) continue;
+    n--; d.x = x + (Math.random() - 0.5) * 3 * sc; d.y = d.y0 = y; d.vx = (Math.random() - 0.5) * 0.05 * sc; d.vy = -(0.07 + Math.random() * 0.07) * sc; d.life = 0; d.r = (0.8 + Math.random() * 0.6) * sc;
+  }
+  const q = rings.find((o) => o.t < 0) || rings[0];
+  q.x = x; q.y = y; q.t = 0; q.s = sc;
+}
+
+function drawSplash(dt) {
+  c.lineWidth = 1;
+  for (const q of rings) {
+    if (q.t < 0) continue;
+    q.t += dt / 1000;
+    const a = 1 - q.t / 1.5;
+    if (a <= 0) { q.t = -1; continue; }
+    const R = (3 + q.t * 16) * q.s;
+    c.strokeStyle = `rgba(226,246,252,${(a * 0.5).toFixed(3)})`;
+    c.beginPath(); c.ellipse(q.x, q.y, R, R * 0.38, 0, 0, 7); c.stroke();
+    if (q.t > 0.25) { c.strokeStyle = `rgba(226,246,252,${(a * 0.24).toFixed(3)})`; c.beginPath(); c.ellipse(q.x, q.y, R * 0.55, R * 0.38 * 0.55, 0, 0, 7); c.stroke(); }
+  }
+  for (const d of droplets) {
+    if (d.life < 0) continue;
+    d.life += dt; d.vy += 0.00028 * dt; d.x += d.vx * dt; d.y += d.vy * dt;
+    if (d.y >= d.y0 && d.vy > 0) { d.life = -1; continue; }
+    c.fillStyle = 'rgba(232,248,253,0.8)';
+    c.beginPath(); c.ellipse(d.x, d.y, d.r, d.r * (1 + Math.min(1.4, Math.abs(d.vy) * 8)), 0, 0, 7); c.fill();
+  }
+}
+
+function drawButterfly(bf, dt) {
+  const sp = (reduced ? 0.3 : 1) * bf.speed;
   bf.p += dt * sp;
+  bf.nextDip -= dt;
+  if (!bf.dip && bf.nextDip <= 0 && !reduced) { bf.dip = true; bf.mode = 0; pickWater(bf); }
   if (bf.mode === 0) {
     const dx = bf.tx - bf.x, dy = bf.ty - bf.y, d = Math.hypot(dx, dy) || 1;
     const v = Math.min(d, (0.012 + 0.01 * (0.5 + 0.5 * Math.sin(bf.p * 0.011))) * dt * sp);
     bf.x += dx / d * v; bf.y += dy / d * v;
     bf.lean += (Math.max(-0.5, Math.min(0.5, dx / d * 0.5)) - bf.lean) * Math.min(1, dt * 0.004);
-    if (d < 3) { if (bf.rest) { bf.mode = 1; bf.wait = 2600 + Math.random() * 3400; } else pickBf(); }
+    if (d < 3) {
+      if (bf.dip) { splash(bf.x, bf.y); bf.dip = false; bf.mode = 1; bf.rest = false; bf.wait = 350; bf.nextDip = 10000 + Math.random() * 15000; }
+      else if (bf.rest) { bf.mode = 1; bf.wait = 2600 + Math.random() * 3400; } else pickBf(bf);
+    }
   } else {
     bf.lean += (0 - bf.lean) * Math.min(1, dt * 0.004);
-    bf.wait -= dt * sp; if (bf.wait <= 0) { bf.mode = 0; pickBf(); }
+    bf.wait -= dt * sp; if (bf.wait <= 0) { bf.mode = 0; pickBf(bf); }
   }
-  bf.amp += ((bf.mode === 0 ? 1 : 0) - bf.amp) * Math.min(1, dt * 0.005);
-  const p = bf.p, a = bf.amp;
+  bf.amp += ((bf.dip ? 0.12 : bf.mode === 0 ? 1 : 0) - bf.amp) * Math.min(1, dt * 0.005);
+  const p = bf.p, a = bf.amp * bf.wob;
   const ox = (Math.sin(p * 0.0031) * 13 + Math.sin(p * 0.0077) * 6) * a, oy = (Math.sin(p * 0.0052) * 8 + Math.sin(p * 0.011) * 4) * a;
   let sx;
-  if (bf.mode === 0) { bf.fp += dt * 0.018 * sp; sx = reduced ? 0.8 : 0.18 + 0.82 * Math.abs(Math.cos(bf.fp)); }
+  if (bf.mode === 0 || bf.dip) { bf.fp += dt * 0.018 * sp * bf.flap; sx = reduced ? 0.8 : 0.18 + 0.82 * Math.abs(Math.cos(bf.fp)); }
   else { bf.rp += dt * 0.0035 * sp; sx = reduced ? 0.7 : 0.3 + 0.55 * (0.5 + 0.5 * Math.cos(bf.rp)); }
-  const zz = Math.max(0, Math.min(1, (bf.y - brookTop) / (h - brookTop))), k = 2 * (bf.big ? 1.1 : 0.85) * (0.75 + 0.5 * zz);
+  const zz = Math.max(0, Math.min(1, (bf.y - brookTop) / (h - brookTop))), k = 2 * (bf.big ? 1.1 : 0.85) * bf.size * (0.75 + 0.5 * zz);
   c.save(); c.translate(bf.x + ox, bf.y + oy); c.rotate(bf.lean); c.scale(k, k);
   for (let sg = -1; sg <= 1; sg += 2) {
     c.save(); c.scale(sg * sx, 1);
-    c.fillStyle = 'rgba(236,234,212,0.92)'; c.strokeStyle = 'rgba(84,98,112,0.55)'; c.lineWidth = 0.6;
+    c.fillStyle = bf.wing; c.strokeStyle = bf.edge; c.lineWidth = 0.6;
     c.beginPath(); c.ellipse(3.4, -2.4, 4.4, 3, -0.45, 0, 7); c.fill(); c.stroke();
     c.beginPath(); c.ellipse(2.4, 2.5, 3, 2.4, 0.5, 0, 7); c.fill(); c.stroke();
-    c.fillStyle = 'rgba(160,196,228,0.5)'; c.beginPath(); c.ellipse(1.6, -0.6, 1.8, 1.5, 0, 0, 7); c.fill();
+    c.fillStyle = bf.spot; c.beginPath(); c.ellipse(1.6, -0.6, 1.8, 1.5, 0, 0, 7); c.fill();
     c.restore();
   }
   c.fillStyle = 'rgba(38,42,54,0.9)'; c.beginPath(); c.ellipse(0, 0, 0.9, 3.4, 0, 0, 7); c.fill();
   c.strokeStyle = 'rgba(38,42,54,0.7)'; c.lineWidth = 0.5;
   c.beginPath(); c.moveTo(-0.3, -3); c.lineTo(-1.8, -6); c.moveTo(0.3, -3); c.lineTo(1.8, -6); c.stroke();
+  c.restore();
+}
+
+// A small round bee: zig-zags between flower clumps, hovers and bobs, lands on a head, moves on.
+function pickBee() {
+  const n = beeAnch.length; if (!n) return;
+  let f = beeAnch[(Math.random() * n) | 0];
+  for (let tries = 0; tries < 6 && (f === bee.f || Math.hypot(f.x - bee.x, f.y - bee.y) < 60); tries++) f = beeAnch[(Math.random() * n) | 0];
+  bee.f = f;
+  bee.tx = f.x + (Math.random() - 0.5) * 6 * f.sc * 0.5; bee.ty = f.y - f.sc * (16 + Math.random() * 9);
+}
+
+function drawBee(dt) {
+  const sp = reduced ? 0.3 : 1;
+  bee.p += dt * sp; bee.nextDip -= dt;
+  if (!bee.dip && bee.nextDip <= 0 && !reduced && bee.mode !== 2) { bee.dip = true; bee.mode = 0; pickWater(bee); }
+  let jx = 0, jy = 0, landed = false;
+  if (bee.mode === 0) {          // travelling: fast, zig-zagging across the line to the target
+    const dx = bee.tx - bee.x, dy = bee.ty - bee.y, d = Math.hypot(dx, dy) || 1;
+    const v = Math.min(d, (0.075 + Math.min(0.06, d * 0.0008)) * dt * sp);
+    bee.x += dx / d * v; bee.y += dy / d * v;
+    const want = Math.atan2(dy, dx); let da = want - bee.ang; da = Math.atan2(Math.sin(da), Math.cos(da));
+    bee.ang += da * Math.min(1, dt * 0.01);
+    const z = Math.sin(bee.p * 0.016) * Math.min(1, d / 50) * 11 * (bee.dip ? 0.5 : 1);
+    jx = -dy / d * z; jy = dx / d * z;
+    if (d < 1.5) {
+      if (bee.dip) { splash(bee.x, bee.y); bee.dip = false; bee.mode = 1; bee.hold = 380; bee.skip = true; bee.nextDip = 10000 + Math.random() * 15000; }
+      else { bee.mode = 1; bee.hold = 700 + Math.random() * 700; }   // hover over the head before landing
+    }
+  } else if (bee.mode === 1) {   // hover: a faint bob
+    jx = Math.sin(bee.p * 0.011) * 1.6; jy = Math.sin(bee.p * 0.021) * 1.8 + Math.sin(bee.p * 0.047) * 0.6;
+    bee.hold -= dt * sp;
+    if (bee.hold <= 0) {
+      if (bee.skip || !bee.f) { bee.skip = false; bee.mode = 0; pickBee(); }
+      else { bee.mode = 2; bee.wait = 1100 + Math.random() * 1900; }
+    }
+  } else {                       // landed on the flower head: nearly still, a small wiggle
+    landed = true;
+    jx = Math.sin(bee.p * 0.03) * 0.5; jy = 2.2 + Math.sin(bee.p * 0.05) * 0.3;
+    bee.wait -= dt * sp; if (bee.wait <= 0) { bee.wait = 0; bee.mode = 0; pickBee(); }
+  }
+  const zz = Math.max(0, Math.min(1, (bee.y - brookTop) / (h - brookTop))), k = 2 * 0.62 * (w < 620 ? 0.85 : 1) * (0.75 + 0.5 * zz);
+  c.save(); c.translate(bee.x + jx, bee.y + jy); c.rotate(landed ? Math.sin(bee.p * 0.002) * 0.15 + bee.ang * 0.6 : bee.ang * 0.5); c.scale(k, k);
+  // wings first, under the body: two ovals, jittered fast so they blur
+  const fly = !landed;
+  c.fillStyle = `rgba(226,242,250,${fly ? 0.2 : 0.3})`;
+  for (let q = 0; q < (reduced ? 1 : 3); q++) {
+    const jit = fly && !reduced ? (Math.random() - 0.5) * 0.9 : 0.1 * q;
+    for (let sg = -1; sg <= 1; sg += 2) {
+      c.save(); c.translate(0.8, sg * 1.2); c.rotate(sg * (fly ? 1.9 + jit : 2.6 + 0.1 * q)); c.beginPath(); c.ellipse(2.3, 0, 3.4, 1.3, 0, 0, 7); c.fill(); c.restore();
+    }
+  }
+  c.fillStyle = 'rgba(206,168,66,0.97)'; c.beginPath(); c.ellipse(-1.3, 0, 3.4, 2.5, 0, 0, 7); c.fill();       // abdomen
+  c.fillStyle = 'rgba(44,34,24,0.9)';
+  c.beginPath(); c.ellipse(-0.1, 0, 0.7, 2.3, 0, 0, 7); c.fill();
+  c.beginPath(); c.ellipse(-2.0, 0, 0.7, 2.1, 0, 0, 7); c.fill();
+  c.beginPath(); c.ellipse(-3.9, 0, 0.5, 1.2, 0, 0, 7); c.fill();                                              // tip
+  c.fillStyle = 'rgba(78,60,36,0.95)'; c.beginPath(); c.arc(2.1, 0, 2, 0, 7); c.fill();                        // fuzzy thorax
+  c.fillStyle = 'rgba(40,32,26,0.95)'; c.beginPath(); c.arc(3.9, 0, 1.15, 0, 7); c.fill();                     // head
   c.restore();
 }
 
@@ -696,7 +839,9 @@ export default {
       c.beginPath(); c.arc(drop.x, drop.y, dr, 0, Math.PI * 2); c.fill();
     }
     drawDragonfly(dtc);
-    drawButterfly(dtc);
+    drawSplash(dtc);
+    drawBee(dtc);
+    for (const b2 of bfs) drawButterfly(b2, dtc);
     c.restore();
     drawTaps(c, dt);
   },
