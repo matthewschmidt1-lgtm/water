@@ -1,7 +1,7 @@
 // Mountain. Layered silhouettes, a snowcap, streams that join into a river.
 // "Follow me" releases one drop at the snowline and the camera walks it down to the river.
 
-const PAN = 90;            // max camera travel in px
+const PAN = 0;             // the camera stays put (it used to pan with the drop; the owner found it restless)
 const STEP = 4;            // polyline sample step in px
 const N_STREAMS = 4;
 const MAX_SPARK = 18;
@@ -337,19 +337,19 @@ function drawButterfly(dt) {
   bf.p += dt * sp;
   if (bf.mode === 0) {
     const dx = bf.tx - bf.x, dy = bf.ty - bf.y, d = Math.hypot(dx, dy) || 1;
-    const v = Math.min(d, (0.03 + 0.025 * (0.5 + 0.5 * Math.sin(bf.p * 0.011))) * dt * sp);
+    const v = Math.min(d, (0.012 + 0.01 * (0.5 + 0.5 * Math.sin(bf.p * 0.011))) * dt * sp);
     bf.x += dx / d * v; bf.y += dy / d * v;
     bf.lean += (Math.max(-0.5, Math.min(0.5, dx / d * 0.5)) - bf.lean) * Math.min(1, dt * 0.004);
-    if (d < 3) { if (bf.rest) { bf.mode = 1; bf.wait = 1800 + Math.random() * 2400; } else pickBf(); }
+    if (d < 3) { if (bf.rest) { bf.mode = 1; bf.wait = 2600 + Math.random() * 3400; } else pickBf(); }
   } else {
     bf.lean += (0 - bf.lean) * Math.min(1, dt * 0.004);
     bf.wait -= dt * sp; if (bf.wait <= 0) { bf.mode = 0; pickBf(); }
   }
   bf.amp += ((bf.mode === 0 ? 1 : 0) - bf.amp) * Math.min(1, dt * 0.005);
   const p = bf.p, a = bf.amp;
-  const ox = (Math.sin(p * 0.0053) * 13 + Math.sin(p * 0.0131) * 6) * a, oy = (Math.sin(p * 0.0089) * 8 + Math.sin(p * 0.019) * 4) * a;
+  const ox = (Math.sin(p * 0.0031) * 13 + Math.sin(p * 0.0077) * 6) * a, oy = (Math.sin(p * 0.0052) * 8 + Math.sin(p * 0.011) * 4) * a;
   let sx;
-  if (bf.mode === 0) { bf.fp += dt * 0.03 * sp; sx = reduced ? 0.8 : 0.18 + 0.82 * Math.abs(Math.cos(bf.fp)); }
+  if (bf.mode === 0) { bf.fp += dt * 0.018 * sp; sx = reduced ? 0.8 : 0.18 + 0.82 * Math.abs(Math.cos(bf.fp)); }
   else { bf.rp += dt * 0.0035 * sp; sx = reduced ? 0.7 : 0.3 + 0.55 * (0.5 + 0.5 * Math.cos(bf.rp)); }
   const zz = Math.max(0, Math.min(1, (bf.y - brookTop) / (h - brookTop))), k = 2 * (bf.big ? 1.1 : 0.85) * (0.75 + 0.5 * zz);
   c.save(); c.translate(bf.x + ox, bf.y + oy); c.rotate(bf.lean); c.scale(k, k);
@@ -434,14 +434,15 @@ function eagleWing(S) {
 
 function drawEagle(dt) {
   eagle.p += dt * (reduced ? 0.25 : 1);
-  const p = eagle.p, a = p * 0.00016;
-  const cx = w * (0.5 + 0.34 * Math.sin(p * 0.000021)), cy = h * (0.17 + 0.04 * Math.sin(p * 0.000033));
-  const rx = w * (0.07 + 0.05 * (0.5 + 0.5 * Math.sin(p * 0.00005))), ry = h * 0.035;
-  const ca = Math.cos(a), sa = Math.sin(a), S = Math.max(17, Math.min(32, w * 0.028));
-  const x = cx + ca * rx, y = cy + sa * ry;
-  c.save(); c.translate(x, y); c.rotate(sa * 0.1);
+  // one long glide across the whole sky, then back the other way; it rides a slow swell and banks a little into it
+  const p = eagle.p, S = Math.max(34, Math.min(64, w * 0.056)), span = w + S * 6, T = 38000;
+  const leg = Math.floor(p / T), u = (p % T) / T, dir = leg % 2 ? -1 : 1;
+  const x = dir > 0 ? -S * 3 + span * u : w + S * 3 - span * u;
+  const y = h * (0.13 + 0.05 * Math.sin(u * 6.283 * 1.3 + leg)) + Math.sin(p * 0.0011) * 3;
+  const ca = dir, sa = Math.cos(u * 6.283 * 1.3 + leg) * 0.6 * dir;
+  c.save(); c.translate(x, y); c.rotate(sa * 0.12);
   c.fillStyle = 'rgba(8,20,34,0.88)';
-  c.save(); c.scale(0.6 + 0.4 * Math.abs(ca), 1);
+  c.save(); c.scale(0.86 + 0.14 * Math.abs(ca), 1);
   c.save(); eagleWing(S); c.scale(-1, 1); eagleWing(S); c.restore();
   c.restore();
   c.fillStyle = 'rgba(8,20,34,0.93)';
